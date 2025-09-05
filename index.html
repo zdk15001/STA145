@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>People Watching — Extra Credit Simulation (v4)</title>
+<style>
+  :root {
+    --bg: #f7f7f9;
+    --card: #ffffff;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --accent: #3b82f6;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: var(--bg); color:#111827;}
+  .container { max-width: 980px; margin: 24px auto; padding: 0 16px;}
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.04); }
+  .header { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  h1 { font-size: 22px; margin: 0 0 4px 0; }
+  .sub { color: var(--muted); font-size: 14px; }
+  /* Layout */
+  .content { padding: 18px 20px; }
+  .flex { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; }
+  @media (max-width: 900px) { .flex { grid-template-columns: 1fr; } }
+  /* Controls and key */
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  button { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: white; cursor: pointer; }
+  button:hover { background: #f3f4f6; }
+  .tag { background: #eef2ff; border: 1px solid #c7d2fe; padding: 4px 8px; border-radius: 999px; font-size: 12px; }
+  .infoBar { display: flex; gap: 12px; align-items: baseline; margin: 8px 0 12px; flex-wrap: wrap; }
+  .timer { font-weight: 700; }
+  .key { background:#fff; border:1px solid var(--border); border-radius:12px; padding: 12px; }
+  .key h2 { font-size: 14px; margin: 0 0 8px 0; color:#111827; }
+  .legend { display:grid; grid-template-columns: 1fr; gap:8px; font-size: 13px; color:#374151; }
+  .chip { display:flex; align-items:center; gap:8px; }
+  .chip span:first-child { font-size: 18px; width: 22px; text-align: center; }
+  .divider { height:1px; background: var(--border); margin: 8px 0; }
+  /* Stage */
+  .stage { position: relative; height: 520px; background: #fafafa; border-radius: 12px; border: 1px solid #eee; overflow: hidden; }
+  .tableArea { position: absolute; left: 50%; top: 50%; width: 460px; height: 460px; transform: translate(-50%,-50%); }
+  .roundTable { position: absolute; left: 50%; top: 50%; width: 280px; height: 280px; transform: translate(-50%,-50%); border-radius: 50%; background: #fff; border: 6px solid #ddd; }
+  .occWrap { position: absolute; }
+  .occupant { position: relative; width: 64px; height: 64px; border-radius: 50%; background: #e8eef9; border: 2px solid #cdd9f6; display: flex; align-items:center; justify-content:center; font-weight: 700; font-size: 15px; }
+  .occLabel { position: absolute; top: 72px; width: 120px; left: 50%; transform: translateX(-50%); text-align: center; font-size: 12px; color: #374151;}
+  /* Icons positioned around the avatar */
+  .icon { position: absolute; font-size: 20px; display: none; }
+  .phone   { top: -14px;  right: -14px; }   /* 📱 */
+  .laugh   { top: -14px;  left:  -14px; }   /* 😂 */
+  .drink   { bottom: -14px; right: -14px; } /* 🥤 */
+  .eat     { bottom: -14px; left:  -14px; } /* 🍽️ */
+  .talk    { top: 22px;    left:  72px; }   /* 💬 */
+  .gesture { top: 22px;    right: 72px; }   /* ✋ */
+  .footer { padding: 12px 20px; color: var(--muted); border-top: 1px solid var(--border); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <div class="header">
+      <h1>People Watching — Extra Credit</h1>
+      <div class="sub">Dining hall table scenes (simulation)</div>
+    </div>
+
+    <div class="content flex">
+      <div>
+        <div class="controls">
+          <button id="playBtn">Play</button>
+          <button id="pauseBtn">Pause</button>
+          <button id="prevBtn">Prev Table</button>
+          <button id="nextBtn">Next Table</button>
+          <span class="tag">Speed: 4× (1 min scene ≈ 15s)</span>
+        </div>
+        <div class="infoBar">
+          <div class="tag" id="sceneTag">Table 1</div>
+          <div class="tag timer" id="timerTag">t = 0 s</div>
+        </div>
+        <div class="stage">
+          <div class="tableArea" id="tableArea">
+            <div class="roundTable"></div>
+            <!-- occupants injected here -->
+          </div>
+        </div>
+      </div>
+      <aside class="key">
+        <h2>Key</h2>
+        <div class="legend">
+          <div class="chip"><span>Ｍ</span><span>Man</span></div>
+          <div class="chip"><span>Ｗ</span><span>Woman</span></div>
+        </div>
+        <div class="divider"></div>
+        <div class="legend">
+          <div class="chip"><span>📱</span><span>Device in use</span></div>
+          <div class="chip"><span>😂</span><span>Laughter</span></div>
+          <div class="chip"><span>🥤</span><span>Drinking</span></div>
+          <div class="chip"><span>🍽️</span><span>Eating</span></div>
+          <div class="chip"><span>💬</span><span>Talking</span></div>
+          <div class="chip"><span>✋</span><span>Hand gesture</span></div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer">
+      Each dot is a seated person labeled by gender (M/W). Icons indicate visible actions. Events last at least 5 seconds and the same table repeats until you click “Next Table.”
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Data: 10 scenes, each 60s ---------- */
+const SCENES = [
+  { table_id: 1, genders: ["M","W","W"],
+    device_events: [{occ:1, t_start: 8,  t_end: 20}],
+    laugh_events:  [{occ:0, t_start:30, t_end: 36}],
+    drink_events:  [{occ:2, t_start:15, t_end: 25}],
+    eat_events:    [{occ:2, t_start:30, t_end: 40}],
+    talk_events:   [{occ:0, t_start: 5, t_end: 18}, {occ:1, t_start:40, t_end: 55}],
+    gesture_events:[{occ:0, t_start:22, t_end: 30}]
+  },
+  { table_id: 2, genders: ["M","M"],
+    device_events: [],
+    laugh_events:  [{occ:1, t_start:25, t_end:31}],
+    drink_events:  [{occ:0, t_start:10, t_end:20}],
+    eat_events:    [],
+    talk_events:   [{occ:0, t_start:12, t_end:22}, {occ:1, t_start:12, t_end:22}],
+    gesture_events:[{occ:1, t_start:40, t_end:48}]
+  },
+  { table_id: 3, genders: ["W","W","W","W"],
+    device_events: [{occ:1, t_start:10, t_end:55}],
+    laugh_events:  [{occ:2, t_start:20, t_end:28}],
+    drink_events:  [{occ:3, t_start:35, t_end:45}],
+    eat_events:    [{occ:0, t_start:42, t_end:52}],
+    talk_events:   [{occ:2, t_start:18, t_end:30}],
+    gesture_events:[{occ:0, t_start:44, t_end:52}]
+  },
+  { table_id: 4, genders: ["M"],
+    device_events: [{occ:0, t_start:5, t_end:60}],
+    laugh_events:  [],
+    drink_events:  [{occ:0, t_start:22, t_end:30}],
+    eat_events:    [],
+    talk_events:   [{occ:0, t_start:12, t_end:20}],
+    gesture_events:[{occ:0, t_start:32, t_end:40}]
+  },
+  { table_id: 5, genders: ["M","W","M","W","W"],
+    device_events: [{occ:3, t_start:15, t_end:22}],
+    laugh_events:  [{occ:4, t_start:22, t_end:30}],
+    drink_events:  [{occ:0, t_start:34, t_end:44}],
+    eat_events:    [{occ:2, t_start:12, t_end:20}],
+    talk_events:   [{occ:1, t_start:40, t_end:55}],
+    gesture_events:[{occ:2, t_start:14, t_end:22}]
+  },
+  { table_id: 6, genders: ["W","W","W"],
+    device_events: [{occ:0, t_start:40, t_end:50}],
+    laugh_events:  [{occ:1, t_start:12, t_end:18}],
+    drink_events:  [{occ:2, t_start:20, t_end:30}],
+    eat_events:    [{occ:1, t_start:34, t_end:44}],
+    talk_events:   [{occ:0, t_start:8,  t_end:18}],
+    gesture_events:[{occ:2, t_start:26, t_end:34}]
+  },
+  { table_id: 7, genders: ["M","W"],
+    device_events: [{occ:1, t_start:32, t_end:60}],
+    laugh_events:  [{occ:1, t_start:40, t_end:45}],
+    drink_events:  [{occ:0, t_start:10, t_end:20}],
+    eat_events:    [{occ:1, t_start:22, t_end:32}],
+    talk_events:   [{occ:0, t_start:8,  t_end:18}, {occ:1, t_start:8,  t_end:18}],
+    gesture_events:[{occ:0, t_start:16, t_end:24}]
+  },
+  { table_id: 8, genders: ["M","M","M","M"],
+    device_events: [{occ:2, t_start:12, t_end:22}],
+    laugh_events:  [{occ:0, t_start:50, t_end:57}],
+    drink_events:  [{occ:3, t_start:26, t_end:34}],
+    eat_events:    [{occ:1, t_start:36, t_end:46}],
+    talk_events:   [{occ:0, t_start:44, t_end:55}],
+    gesture_events:[{occ:2, t_start:18, t_end:26}]
+  },
+  { table_id: 9, genders: ["M","W","W","M","W","M"],
+    device_events: [],
+    laugh_events:  [{occ:3, t_start:28, t_end:35}],
+    drink_events:  [{occ:5, t_start:12, t_end:22}],
+    eat_events:    [{occ:4, t_start:18, t_end:28}],
+    talk_events:   [{occ:1, t_start:14, t_end:24}, {occ:2, t_start:14, t_end:24}],
+    gesture_events:[{occ:0, t_start:30, t_end:38}]
+  },
+  { table_id:10, genders: [],
+    device_events: [],
+    laugh_events:  [],
+    drink_events:  [],
+    eat_events:    [],
+    talk_events:   [],
+    gesture_events:[]
+  }
+];
+
+const SCENE_SECONDS = 60;
+const FRAME_MS = 250; // 4x speed -> 60s in ~15s
+let currentSceneIdx = 0;
+let simT = 0; // simulated seconds
+let playing = false;
+let timerHandle = null;
+
+const tableArea = document.getElementById('tableArea');
+const sceneTag  = document.getElementById('sceneTag');
+const timerTag  = document.getElementById('timerTag');
+
+function clearChildren(el){ while(el.firstChild){ el.removeChild(el.firstChild); } }
+
+function renderScene(idx){
+  clearChildren(tableArea);
+  const s = SCENES[idx];
+  sceneTag.textContent = 'Table ' + s.table_id;
+  simT = 0;
+  timerTag.textContent = 't = 0 s';
+  // Base table
+  const round = document.createElement('div');
+  round.className = 'roundTable';
+  tableArea.appendChild(round);
+  // Occupants around circle
+  const n = s.genders.length;
+  const radius = 190;
+  for(let i=0;i<n;i++){
+    const angle = (2*Math.PI * i / Math.max(1,n));
+    const cx = 230 + radius * Math.cos(angle);
+    const cy = 230 + radius * Math.sin(angle);
+    const wrap = document.createElement('div');
+    wrap.className = 'occWrap';
+    wrap.style.left = (cx-32) + 'px';
+    wrap.style.top  = (cy-32) + 'px';
+    wrap.dataset.index = i.toString();
+
+    const occ = document.createElement('div');
+    occ.className = 'occupant';
+    occ.textContent = s.genders[i] || '';
+
+    const label = document.createElement('div');
+    label.className = 'occLabel';
+    label.textContent = 'Person ' + (i+1) + ' (' + (s.genders[i] || '?') + ')';
+
+    // Icons
+    const icons = [
+      ['phone',   '📱'],
+      ['laugh',   '😂'],
+      ['drink',   '🥤'],
+      ['eat',     '🍽️'],
+      ['talk',    '💬'],
+      ['gesture', '✋']
+    ];
+    for(const [cls, text] of icons){
+      const el = document.createElement('div');
+      el.className = 'icon ' + cls;
+      el.textContent = text;
+      wrap.appendChild(el);
+    }
+
+    wrap.appendChild(occ);
+    wrap.appendChild(label);
+    tableArea.appendChild(wrap);
+  }
+}
+
+function between(t, a, b){ return t >= a && t <= b; }
+function isActive(events, i){
+  for(const e of events){
+    if(e.occ === i && between(simT, e.t_start, e.t_end)) return true;
+  }
+  return false;
+}
+
+function updateIcons(){
+  const s = SCENES[currentSceneIdx];
+  const wraps = Array.from(document.querySelectorAll('.occWrap'));
+  wraps.forEach((w, i) => {
+    const show = (cls, active) => w.querySelector('.' + cls).style.display = active ? 'block' : 'none';
+    show('phone',   isActive(s.device_events, i));
+    show('laugh',   isActive(s.laugh_events, i));
+    show('drink',   isActive(s.drink_events, i));
+    show('eat',     isActive(s.eat_events, i));
+    show('talk',    isActive(s.talk_events, i));
+    show('gesture', isActive(s.gesture_events, i));
+  });
+}
+
+function tick(){
+  if(!playing) return;
+  simT += 1;
+  if(simT > SCENE_SECONDS){
+    // Loop the SAME table rather than auto-advancing
+    renderScene(currentSceneIdx); // resets simT and clears icons/timer
+  } else {
+    timerTag.textContent = 't = ' + Math.min(simT, SCENE_SECONDS) + ' s';
+    updateIcons();
+  }
+}
+
+function play(){
+  if(playing) return;
+  playing = true;
+  timerHandle = setInterval(tick, FRAME_MS);
+}
+function pause(){
+  playing = false;
+  if(timerHandle){ clearInterval(timerHandle); timerHandle = null; }
+}
+
+document.getElementById('playBtn').onclick = () => play();
+document.getElementById('pauseBtn').onclick = () => pause();
+document.getElementById('prevBtn').onclick = () => { pause(); currentSceneIdx = (currentSceneIdx-1+SCENES.length)%SCENES.length; renderScene(currentSceneIdx); };
+document.getElementById('nextBtn').onclick = () => { pause(); currentSceneIdx = (currentSceneIdx+1)%SCENES.length; renderScene(currentSceneIdx); };
+
+// Initial render
+renderScene(0);
+</script>
+</body>
+</html>
