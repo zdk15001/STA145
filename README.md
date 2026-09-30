@@ -1,1 +1,1 @@
-This repository includes script and data for Applied Statistics for Social Scientists (STA145) at The College of New Jersey (TCNJ). 
+This repository includes a workbook for Applied Statistics for Social Scientists (STA145) at The College of New Jersey (TCNJ) as well as all associated scripts and datasets. Answer keys and instructor scripts are available upon request klinez@tcnj.edu. 
