@@ -213,17 +213,6 @@
     return s;
   }
   function sig3(x) { return String(parseFloat(x.toPrecision(3))); }
-  function shuffle(a) {
-    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
-    return a;
-  }
-  function sampleOf(arr, k) {
-    if (k >= arr.length) return arr.slice();
-    var c = arr.slice();
-    for (var i = 0; i < k; i++) { var j = i + Math.floor(Math.random() * (c.length - i)); var t = c[i]; c[i] = c[j]; c[j] = t; }
-    return c.slice(0, k);
-  }
-  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
   function quantile(sorted, p) {
     var h = (sorted.length - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
     return sorted[lo] + (sorted[hi] - sorted[lo]) * (h - lo);
@@ -257,11 +246,10 @@
   function textWidth(s, fs) { return s.length * fs * 0.56; }
 
   /* class guide for p-values (workbook 3.2) */
+  /* class wording for p-values: fairly confident below .05, otherwise not enough evidence */
   function verdict(p) {
-    if (p < 0.01) return { key: "confident", pill: "strong", short: "Confident there's a difference (p < .01)" };
     if (p < 0.05) return { key: "fairly", pill: "strong", short: "Fairly confident there's a difference (p < .05)" };
-    if (p < 0.10) return { key: "marginal", pill: "marginal", short: "Marginally significant (p < .10)" };
-    return { key: "none", pill: "none", short: "Not enough evidence of a difference" };
+    return { key: "none", pill: "none", short: "Not enough evidence of a difference (p ≥ .05)" };
   }
   function pText(res) { // p as a reader would say it
     var pp = TT.printedPieces(res).p;
@@ -279,12 +267,9 @@
   }
 
   function conclusionSentence(c, res) {
-    var g = c.grp, o = OUT[c.y], v = verdict(res.p);
-    var groups = g.A.short + " and " + g.B.short;
-    if (v.key === "confident") return "Because p is below .01, we're confident that " + groups + " differ in their average " + o.noun + ".";
-    if (v.key === "fairly") return "Because p is below .05, we're fairly confident that " + groups + " differ in their average " + o.noun + ".";
-    if (v.key === "marginal") return "Because p is between .05 and .10, this is marginally significant. It hints at a difference worth more research, but we don't have enough evidence to say " + groups + " differ in their average " + o.noun + ".";
-    return "Because p is above .10, we don't have enough evidence to say that " + groups + " differ in their average " + o.noun + ".";
+    var g = c.grp, o = OUT[c.y];
+    if (res.p < 0.05) return "Because p is below .05, we're fairly confident that " + g.A.short + " " + (res.diff >= 0 ? o.more : o.less) + " than " + g.B.short + ".";
+    return "Because p is .05 or higher, we do not have enough evidence to say that " + g.A.short + " and " + g.B.short + " differ in their average " + o.noun + ".";
   }
   // "We're 95 percent confident that, on average, X ... somewhere between L and H ... than Y."
   function ciStatement(c, res) {
@@ -293,11 +278,6 @@
     else if (res.hi < 0) body = k.pre + " somewhere between " + r2(-res.hi) + " and " + r2(-res.lo) + " " + o.unit + " " + k.down + k.post;
     else body = k.pre + " somewhere between " + r2(-res.lo) + " " + o.unit + " " + k.down + " and " + r2(res.hi) + " " + o.unit + " " + k.up + k.post;
     return "We're 95 percent confident that, on average, " + g.A.short + " " + body + " than " + g.B.short + ".";
-  }
-  function ciSentence(c, res) {
-    return ciStatement(c, res) + (res.lo > 0 || res.hi < 0
-      ? " Since this range doesn't include zero, it suggests a real difference between the groups."
-      : " Since this range includes zero, the true difference could be zero.");
   }
   function directionSentence(c, res) {
     var g = c.grp, o = OUT[c.y];
@@ -313,28 +293,10 @@
     if (res.p < 0.05) return "We're fairly confident that " + g.A.short + " " + (res.diff >= 0 ? o.more : o.less) + " than " + g.B.short + " (" + pShort(res) + ").";
     return "We do not have enough evidence to say that " + g.A.short + " and " + g.B.short + " differ in their average " + o.noun + " (" + pShort(res) + ").";
   }
-  function meansSentence(c, res) {
-    var g = c.grp, o = OUT[c.y];
-    return cap(g.A.who) + " " + o.verb(r2(res.mx)) + ", compared with " + r2(res.my) + " for " + g.B.who + ".";
-  }
   function pSentence(c, res) {
     var g = c.grp;
     return "The p-value is " + (res.p < 0.001 ? "less than 0.001" : pText(res)) + ". If there were really no difference between " + g.A.short + " and " + g.B.short +
       " in the population, a gap this big or bigger would show up in " + pFreq(res.p) + " of random samples. " + conclusionSentence(c, res);
-  }
-  function sizeOf(res) {
-    var ratio = Math.abs(res.diff) / Math.sqrt((res.sdx * res.sdx + res.sdy * res.sdy) / 2);
-    return ratio < 0.2 ? "small" : ratio < 0.5 ? "modest" : ratio < 0.8 ? "moderate" : "large";
-  }
-  function practicalSentence(c, res) {
-    var o = OUT[c.y], size = sizeOf(res);
-    return "For scale: the averages differ by " + r2(Math.abs(res.diff)) + " " + o.unit + ", while individual answers within each group typically sit about " +
-      r2(res.sdx) + " and " + r2(res.sdy) + " " + o.unit + " from their group's mean (the standard deviations). So the gap is " + size + " compared with the spread inside each group.";
-  }
-  function sampleSentence(c, na, nb, full) {
-    var g = c.grp;
-    if (full) return "All HCMST respondents who answered both questions: " + fmtInt(na) + " " + g.A.who + " and " + fmtInt(nb) + " " + g.B.who + ".";
-    return "A random sample of " + na + " " + g.A.who + " and " + nb + " " + g.B.who + ", drawn from HCMST.";
   }
   function commandLine(c, full) {
     return "t.test(" + c.y + " ~ " + c.grp.g + ", data = " + (full ? "hcmst" : "my_sample") + ")";
@@ -376,22 +338,6 @@
     });
   }
 
-  /* a random practice item: comparison + sample + result */
-  var N_CHOICES = [15, 20, 25, 30, 40, 50, 60, 80, 100, 150, 250, Infinity, Infinity];
-  function makeItem(avoidId) {
-    for (var tries = 0; tries < 50; tries++) {
-      var c = pick(COMPS);
-      if (c.id === avoidId && tries < 10) continue;
-      var n = pick(N_CHOICES), G = GROUP_FOR[c.id];
-      var full = !isFinite(n);
-      var a = full ? G.a : sampleOf(G.a, n), b = full ? G.b : sampleOf(G.b, n);
-      if (b.length >= G.b.length && a.length >= G.a.length) full = true;
-      var res = TT.welch(a, b);
-      if (!(res.se > 0) || !isFinite(res.t)) continue;
-      return { c: c, res: res, full: full, na: a.length, nb: b.length, a: a, b: b };
-    }
-    return null;
-  }
 
   /* =========================================================
      Charts
@@ -559,76 +505,7 @@
      ========================================================= */
   var ex = { c: COMPS[0], a: null, b: null, full: true, res: null, stats: null, selKey: null, cell: null };
 
-  /* full-survey direction and significance, used to flag samples that flip the pattern */
-  var FULL = {};
-  COMPS.forEach(function (c) { var G = GROUP_FOR[c.id], r = TT.welch(G.a, G.b); FULL[c.id] = { aHigher: r.diff > 0, sig: r.p < 0.05 }; });
 
-  /* "So what?" sentences: what the result means for the question people actually care about */
-  var SOWHAT = {
-    "quality-howmet": {
-      yes: function (x) {
-        return x.size === "small"
-          ? "How a couple met says little about how happy they are. The gap is real, but it's a sliver of a point on a 5-point scale, so worries that dating apps produce unhappier couples aren't backed by a meaningful difference."
-          : "How a couple met is linked to how they rate their relationship, which is worth explaining: online couples may be newer, younger, or different in other ways.";
-      },
-      no: function (x) { return "This " + x.where + " gives no clear sign that meeting online goes with better or worse relationships, so worries that dating apps produce unhappier couples don't find support here."; }
-    },
-    "quality-married": {
-      yes: function () { return "Married people rate their relationships higher, but that doesn't mean marriage makes relationships better: happier couples may be more likely to marry, and unhappy marriages may already have ended."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence that married and unmarried partners rate their relationships differently."; }
-    },
-    "quality-living": {
-      yes: function () { return "People who live with their partner rate their relationships higher. Living apart often goes with newer or less settled relationships, so the gap may say more about the stage of the relationship than about sharing an address."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence that living together goes with higher or lower relationship quality."; }
-    },
-    "quality-couple": {
-      yes: function (x) { return "In this " + x.where + ", same-sex and different-sex couples rate their relationships differently" + (x.size === "small" ? ", though the gap is small next to the spread within each group." : "."); },
-      no: function (x) { return "This " + x.where + " gives no clear evidence that same-sex and different-sex couples rate their relationships differently, so it offers no support for the idea that same-sex relationships are lower in quality."; }
-    },
-    "quality-friends": {
-      yes: function (x) {
-        return x.aHigher
-          ? "Couples introduced by friends rate their relationships higher, which fits the idea that friends screen for good matches and that a shared social circle supports a couple."
-          : "Couples introduced by friends rated their relationships lower here, which goes against the idea that friends make the best matchmakers.";
-      },
-      no: function (x) { return "This " + x.where + " gives no clear evidence that being introduced by friends goes with a better relationship, so the idea that friends make the best matchmakers isn't supported here."; }
-    },
-    "agemet-howmet": {
-      yes: function () { return "People who met online were older when they met. That fits the idea that online dating matters most once school and college social circles have thinned out and fewer potential partners are close at hand."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence that people who meet online are a different age when they meet" + (x.full ? "." : ". The full survey, with far more people, does."); }
-    },
-    "couple-howmet": {
-      yes: function () { return "Couples who met online got together faster. People on a dating site are usually there looking for a partner, while people who meet as classmates or coworkers may know each other for years first."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence that meeting online changes how fast people become a couple. These times are very skewed, which makes a gap harder to detect in a small sample."; }
-    },
-    "movein-howmet": {
-      yes: function () { return "Couples who met online moved in together sooner after they started dating, which may reflect people who went online already looking for something serious."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence that meeting online changes how soon couples move in together."; }
-    },
-    "gap-couple": {
-      yes: function () { return "Same-sex couples tend to have bigger age gaps. One explanation researchers offer is that a smaller pool of potential partners makes people more open to partners further from their own age."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence that age gaps differ between same-sex and different-sex couples."; }
-    },
-    "gap-married": {
-      yes: function () { return "Married couples tend to be closer in age. Couples with big age gaps may be less likely to marry, or marriages with big gaps may be less likely to last; this test doesn't show which."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence that age gaps differ between married and unmarried couples."; }
-    },
-    "age-app": {
-      yes: function () { return "Dating app users are younger than other people who are dating, so an outreach program that relies on apps would reach younger daters better than older ones."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence that app users differ in age from other people who are dating" + (x.full ? "." : ". The whole survey has only 98 app users, so small samples have little power to detect a gap."); }
-    },
-    "years-howmet": {
-      yes: function () { return "Couples who met online have been together for less time, but that's mostly history: online dating took off recently, so online couples are newer. A real difference between groups isn't automatically a cause."; },
-      no: function (x) { return "This " + x.where + " doesn't give clear evidence of a difference in how long couples have been together."; }
-    }
-  };
-  function soWhat(c, res, full) {
-    var x = { full: full, where: full ? "survey" : "sample", aHigher: res.diff > 0, size: sizeOf(res) }, S = SOWHAT[c.id], F = FULL[c.id];
-    if (res.p >= 0.05) return S.no(x);
-    if (!full && F.sig && x.aHigher !== F.aHigher)
-      return "The gap in this sample runs the opposite way from the full survey, a reminder that small samples bounce around, even when p is below .05.";
-    return S.yes(x);
-  }
 
   /* ---------- assumptions (workbook 3.2, step 5) ---------- */
   function skewness(v) {
@@ -847,9 +724,10 @@
     }
     renderConsole(pre, c, res, ex.full, true);
     $("ex-console-note").textContent = ex.full ? "Everyone in HCMST" : "Random sample: " + a.length + " + " + b.length;
-    $("ex-ci-caption").textContent = "Group 1 minus group 2 (" + g.A.lab + " − " + g.B.lab + "), in " + o.unit + ". Drawn at twice the scale of the box plots above, so small differences are easier to see. The dark vertical line marks 0, no difference.";
+    $("ex-ci-caption").textContent = "Group 2 minus group 1 (" + g.B.lab + " − " + g.A.lab + "), in " + o.unit + ", so a higher group 2 average lands to the right of 0. Drawn at twice the scale of the box plots above. The dark vertical line marks 0, no difference. R's output subtracts the other way (" + g.A.lab + " − " + g.B.lab + "), so its interval has the opposite sign.";
     var dom = $("ex-box")._domain || [0, 1];
-    drawCI($("ex-ci"), res, dom[1] - dom[0], "Difference in average " + o.noun + ", " + g.A.lab + " minus " + g.B.lab + " (" + o.unit + ")");
+    var flip = { diff: -res.diff, lo: -res.hi, hi: -res.lo };
+    drawCI($("ex-ci"), flip, dom[1] - dom[0], "Difference in average " + o.noun + ", " + g.B.lab + " minus " + g.A.lab + " (" + o.unit + ")");
     $("ex-ci-sentence").textContent = ciStatement(c, res);
 
     // plain English: direction, magnitude, significance
@@ -910,398 +788,6 @@
       exCellSel(); exCellExplain();
     });
     exDraw();
-  }
-
-  /* =========================================================
-     Read the output
-     ========================================================= */
-  var rd = { item: null };
-  var Q_ORDER = ["mean", "higher", "pval", "pmean", "order", "zero", "class"];
-
-  function uniqOptions(opts) {
-    var seen = {}, out = [];
-    opts.forEach(function (o) { if (!seen[o.text]) { seen[o.text] = 1; out.push(o); } });
-    return out;
-  }
-  function buildQuestions(item) {
-    var c = item.c, o = OUT[c.y], g = c.grp, res = item.res, P = TT.printedPieces(res);
-    var Q = {};
-    var askB = Math.random() < 0.5, G1 = askB ? g.B : g.A, mG = askB ? P.mB : P.mA, mO = askB ? P.mA : P.mB;
-    Q.mean = { prompt: "What was the average " + o.noun + " for " + G1.who + "?",
-      options: [{ text: mG, ok: true }, { text: mO }, { text: P.hi }, { text: P.t }],
-      explain: "Look under “sample estimates”: “mean in group " + G1.lab + "” is " + mG + "." };
-    var pOpt = P.p.charAt(0) === "<" ? P.p + "  (less than 2.2e-16)" : P.p;
-    var pNote = "";
-    if (P.p.charAt(0) === "<") pNote = " R prints “< 2.2e-16” when the p-value is too small to show. It's essentially zero.";
-    else if (/e/.test(P.p)) pNote = " R uses scientific notation for very small numbers: " + P.p + " means " + res.p.toFixed(Math.min(12, 2 - Math.floor(Math.log10(res.p)))).replace(/0+$/, "") + ".";
-    Q.pval = { prompt: "Which number is the p-value?",
-      options: [{ text: pOpt, ok: true }, { text: P.t }, { text: P.df }, { text: P.lo }],
-      explain: "It's on the third line, right after “p-value”. The other numbers are the t statistic, the degrees of freedom (df), and the lower end of the confidence interval." + pNote };
-    Q.order = { prompt: "The confidence interval estimates which difference?",
-      options: [{ text: "The average for " + g.A.lab + " minus the average for " + g.B.lab, ok: true },
-        { text: "The average for " + g.B.lab + " minus the average for " + g.A.lab },
-        { text: "The median for " + g.A.lab + " minus the median for " + g.B.lab },
-        { text: "The range that 95% of individual answers fall in" }],
-      explain: "R puts the groups in alphabetical order, so “" + g.A.lab + "” comes first and every difference is " + g.A.lab + " minus " + g.B.lab + ". The “alternative hypothesis” line names them in that order. Here " + P.mA + " − " + P.mB + " = " + r2(res.diff) + ", the center of the interval." };
-    var includes = res.lo <= 0 && res.hi >= 0;
-    Q.zero = { prompt: "Does the 95% confidence interval include 0?", fixed: true,
-      options: [{ text: "Yes", ok: includes }, { text: "No", ok: !includes }],
-      explain: "The interval runs from " + P.lo + " to " + P.hi + ". " + (includes
-        ? "It crosses 0, so “no difference” is still a plausible value. That matches a p-value above .05."
-        : "Both ends are on the same side of 0, so “no difference” isn't a plausible value. That matches a p-value below .05.") };
-    var v = verdict(res.p);
-    Q["class"] = { prompt: "Using our class guide for p-values, which conclusion fits?", fixed: true,
-      options: [{ text: "We're confident there's a difference (p is below .01)", ok: v.key === "confident" },
-        { text: "We're fairly confident there's a difference (p is between .01 and .05)", ok: v.key === "fairly" },
-        { text: "Marginally significant, worth more research (p is between .05 and .10)", ok: v.key === "marginal" },
-        { text: "We don't have enough evidence to say the groups differ (p is .10 or higher)", ok: v.key === "none" }],
-      explain: "p = " + P.p + ". Our guide: below .01, confident; below .05, fairly confident; below .10, marginally significant; otherwise, not enough evidence. Never conclude the groups are the same." };
-    var hiG = res.diff >= 0 ? g.A : g.B, loG = res.diff >= 0 ? g.B : g.A;
-    var d = r2(Math.abs(res.diff)), far = r2(Math.max(Math.abs(res.lo), Math.abs(res.hi))), near = r2(Math.min(Math.abs(res.lo), Math.abs(res.hi)));
-    Q.higher = { prompt: "Which group had the higher average " + o.noun + ", and by about how much?",
-      options: [{ text: hiG.lab + ", by about " + d + " " + o.unit, ok: true }, { text: loG.lab + ", by about " + d + " " + o.unit },
-        { text: hiG.lab + ", by about " + far + " " + o.unit }, { text: loG.lab + ", by about " + near + " " + o.unit }],
-      explain: P.mA + " − " + P.mB + " = " + r2(res.diff) + ", so " + hiG.lab + " is higher by about " + d + " " + o.unit + ". The ends of the confidence interval are a range for that difference, not the difference itself." };
-    Q.pmean = { prompt: "What does p = " + P.p + " mean here?",
-      options: [{ text: "If there were really no difference between these groups in the population, a gap this big or bigger would show up in " + pFreq(res.p) + " of random samples.", ok: true },
-        { text: "There is " + (res.p < 0.001 ? "less than a 0.1%" : "a " + pctStr(res.p)) + " chance that there's no difference between the groups." },
-        { text: "There is " + (res.p < 0.001 ? "more than a 99.9%" : "a " + pctStr(1 - res.p)) + " chance that the hypothesis is true." },
-        { text: "The two groups' averages differ by " + P.p + " " + o.unit + "." }],
-      explain: "That's the definition from 3.2: the probability of a result at least this extreme if there were truly no difference. It is not the chance that either hypothesis is true." };
-    var others = shuffle(["mean", "higher", "pval", "pmean", "order", "zero"]).slice(0, 4).concat(["class"]);
-    others.sort(function (x, y) { return Q_ORDER.indexOf(x) - Q_ORDER.indexOf(y); });
-    return others.map(function (k) {
-      var q = Q[k]; q.key = k; q.options = uniqOptions(q.options);
-      if (!q.fixed) shuffle(q.options);
-      return q;
-    });
-  }
-  function renderQuestion(q, idx, prefix, onAnswer) {
-    var fs = el("fieldset", { class: "q" });
-    fs.appendChild(el("legend", null, [el("span", { class: "qnum", text: (idx + 1) + "." }), q.prompt]));
-    var fb = el("div", { class: "fb", role: "status", hidden: "" });
-    q.options.forEach(function (o, j) {
-      var id = prefix + "-" + idx + "-" + j;
-      var inp = el("input", { type: "radio", name: prefix + "-" + idx, id: id, value: String(j) });
-      var lab = el("label", { class: "choice", for: id }, [inp, el("span", { text: o.text })]);
-      inp.addEventListener("change", function () {
-        Array.prototype.forEach.call(fs.querySelectorAll(".choice"), function (l) { l.classList.remove("is-right", "is-wrong"); });
-        lab.classList.add(o.ok ? "is-right" : "is-wrong");
-        fb.hidden = false; fb.className = "fb " + (o.ok ? "right" : "wrong"); fb.textContent = "";
-        fb.appendChild(el("strong", { text: o.ok ? "Correct." : "Not quite." }));
-        fb.appendChild(document.createTextNode(o.ok ? q.explain : "Try another answer, or read this hint: " + q.explain));
-        if (onAnswer) onAnswer(idx, !!o.ok);
-      });
-      fs.appendChild(lab);
-    });
-    fs.appendChild(fb);
-    return fs;
-  }
-  function rdNew() {
-    var item = makeItem(rd.item && rd.item.c.id); rd.item = item;
-    var c = item.c, o = OUT[c.y];
-    $("rd-context").textContent = sampleSentence(c, item.na, item.nb, item.full);
-    $("rd-measure").textContent = "Measured: " + o.desc + " Who's included: " + c.pop;
-    renderConsole($("rd-out"), c, item.res, item.full);
-    var qs = buildQuestions(item), box = $("rd-questions"), state = {};
-    box.textContent = "";
-    $("rd-tally").textContent = "";
-    qs.forEach(function (q, i) {
-      box.appendChild(renderQuestion(q, i, "rdq", function (idx, ok) {
-        state[idx] = ok;
-        var answered = Object.keys(state).length, right = Object.keys(state).filter(function (k) { return state[k]; }).length;
-        $("rd-tally").textContent = right + " of " + qs.length + " correct" + (answered < qs.length ? " so far." : (right === qs.length ? ". Nice work. Try a new printout." : ". Change any answer to try again."));
-      }));
-    });
-  }
-
-  /* =========================================================
-     Write it up: generator + checker
-     ========================================================= */
-  var wr = { item: null };
-  function wrNew() {
-    var item = makeItem(wr.item && wr.item.c.id); wr.item = item;
-    var c = item.c, o = OUT[c.y], g = c.grp;
-    $("wr-rq").textContent = c.rq;
-    $("wr-hyp").textContent = c.hyp;
-    $("wr-data").textContent = sampleSentence(c, item.na, item.nb, item.full) + " Each person reported their " + o.noun + ". " + o.desc;
-    $("wr-analysis").textContent = "An independent samples t-test (Welch) was conducted to compare " + o.noun + " between " + g.A.short + " and " + g.B.short + ".";
-    renderConsole($("wr-out"), c, item.res, item.full);
-    $("wr-text").value = "";
-    $("wr-feedback").textContent = "";
-    $("wr-model").hidden = true;
-  }
-  function modelAnswer(item) {
-    var c = item.c, res = item.res, box = $("wr-model");
-    box.textContent = "";
-    box.appendChild(el("h3", { text: "An example answer" }));
-    box.appendChild(el("ul", null, [
-      el("li", null, [el("b", { text: "Mean for each group: " }), meansSentence(c, res)]),
-      el("li", null, [el("b", { text: "Confidence interval of the difference: " }), ciSentence(c, res)]),
-      el("li", null, [el("b", { text: "Interpretation of the p-value: " }), pSentence(c, res)]),
-      el("li", null, [el("b", { text: "Going further, practical significance: " }), practicalSentence(c, res)]),
-      el("li", null, [el("b", { text: "So what? " }), soWhat(c, res, item.full)])
-    ]));
-    if (c.note) box.appendChild(el("p", { class: "note", text: c.note }));
-    box.hidden = false;
-  }
-
-  function normalize(t) {
-    return " " + t.toLowerCase().replace(/[−]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ") + " ";
-  }
-  function numbers(t) {
-    var re = /(^|[^\d.\w])(-?)((?:\d{1,3}(?:,\d{3})+|\d*\.?\d+)(?:e-?\d+)?)(\s*%)?/g, out = [], m;
-    while ((m = re.exec(t))) {
-      var s = m[3].replace(/,/g, ""), sci = /e/.test(s), val = parseFloat(s);
-      if (!isFinite(val)) continue;
-      var mant = s.split("e")[0], dec = mant.indexOf(".") >= 0 ? mant.length - mant.indexOf(".") - 1 : 0;
-      if (m[2] === "-") val = -val;
-      if (m[4]) { val /= 100; dec += 2; }
-      out.push({ v: val, d: sci ? 12 : dec, sci: sci });
-      re.lastIndex = m.index + m[0].length;
-    }
-    return out;
-  }
-  function numMatches(tok, target, absolute) {
-    var v = absolute ? Math.abs(tok.v) : tok.v, tg = absolute ? Math.abs(target) : target;
-    if (tok.sci) return Math.abs(v - tg) <= Math.abs(tg) * 0.06;
-    var unit = Math.pow(10, -tok.d);
-    if (!(tok.d >= 2 || unit <= Math.abs(tg) / 10)) return false;
-    return Math.abs(v - tg) < unit + 1e-12;
-  }
-  function twoDistinct(toks, x, y, absolute) {
-    var ix = [], iy = [];
-    toks.forEach(function (t, i) { if (numMatches(t, x, absolute)) ix.push(i); if (numMatches(t, y, absolute)) iy.push(i); });
-    for (var i = 0; i < ix.length; i++) for (var j = 0; j < iy.length; j++) if (ix[i] !== iy[j]) return true;
-    return false;
-  }
-  function hasAny(t, list) { return list.some(function (k) { return t.indexOf(k) >= 0; }); }
-
-  function checkWriteup(text, item) {
-    var c = item.c, o = OUT[c.y], g = c.grp, res = item.res, P = TT.printedPieces(res), t = normalize(text);
-    var toks = numbers(t), out = [];
-    var add = function (status, title, body) { out.push({ status: status, title: title, body: body }); };
-    var words = text.trim().split(/\s+/).filter(Boolean).length;
-
-    // 1. means
-    if (twoDistinct(toks, res.mx, res.my, false))
-      add("pass", "Group means", "You reported the average for both groups.");
-    else
-      add("fix", "Group means", "Give the average " + o.noun + " for each group (" + P.mA + " for " + g.A.lab + " and " + P.mB + " for " + g.B.lab + " under “sample estimates”). Rounding to two decimals is fine.");
-
-    // 2. confidence interval
-    if (twoDistinct(toks, res.lo, res.hi, true)) {
-      add("pass", "Confidence interval", "You gave both ends of the 95% confidence interval for the difference.");
-      if (!/(includ|contain|cross|span|overlap|cover|go(es)? through|has)\w*\s+(\w+\s+){0,3}?(zero|0(?!\.?\d))/.test(t) && !/(zero|0(?!\.?\d))\s+(is|isn't|is not|was|wasn't)\s+(\w+\s+){0,2}?(in|inside|within|included|outside)/.test(t))
-        add("tip", "Does the interval include 0?", "Say whether the interval includes 0. That tells the reader whether “no difference” is still plausible (here it " + (res.lo <= 0 && res.hi >= 0 ? "is" : "isn't") + ").");
-    } else {
-      add("fix", "Confidence interval", "Report the 95% confidence interval of the difference: from " + P.lo + " to " + P.hi + " (" + g.A.lab + " minus " + g.B.lab + "). Rounding to two decimals is fine.");
-    }
-
-    // 3. p-value reported
-    var pExact = toks.some(function (tk) { return numMatches(tk, res.p, false); });
-    var claims = [], pre = /(\bp\b|p-value|p value)/g, m;
-    while ((m = pre.exec(t))) {
-      var after = t.slice(m.index + m[0].length, m.index + m[0].length + 45);
-      var cm = after.match(/(<=|>=|<|>|≤|≥|less than|lower than|below|under|smaller than|greater than|more than|above|over|bigger than|larger than|higher than)\s*(?:the\s+)?(?:alpha\s+(?:of\s+)?|cutoff\s+(?:of\s+)?|threshold\s+(?:of\s+)?)?(-?\d*\.?\d+(?:e-?\d+)?)/);
-      if (cm) {
-        var num = parseFloat(cm[2]), less = /<|≤|less|lower|below|under|smaller/.test(cm[1]);
-        claims.push({ text: cm[0].trim(), ok: less ? res.p < num : res.p > num });
-      }
-    }
-    var badClaim = claims.filter(function (x) { return !x.ok; })[0], goodClaim = claims.some(function (x) { return x.ok; });
-    if (badClaim) add("fix", "p-value", "You wrote “p " + badClaim.text + "”, but the printout says p-value " + (P.p.charAt(0) === "<" ? P.p : "= " + P.p) + ".");
-    else if (pExact || goodClaim) add("pass", "p-value", "You reported the p-value.");
-    else add("fix", "p-value", "Report the p-value. It's on the third line of the printout, after “p-value” (" + P.p + ").");
-
-    // (computed early so the conclusion row doesn't double up with it)
-    var nullRe = /there (is|was|'s|are|were) no (real |actual |true |meaningful )?(difference|relationship|effect|association|link)|\bno difference\b|(are|were|is|was) (basically |essentially |about |roughly )?the same|(are|were) (equal|identical)|accept(ed|ing|s)? the null|null (hypothesis )?(is|was) (true|correct|confirmed|right)|(groups?|means?|averages?) (are|were) (equal|the same)/g;
-    var nullHit = null;
-    while ((m = nullRe.exec(t))) {
-      var before = t.slice(Math.max(0, m.index - 45), m.index), after = t.slice(m.index + m[0].length, m.index + m[0].length + 40);
-      if (/\b(if|assum\w*|suppos\w*|rule out|ruled out|under|whether|unless|consistent with|chance|probability|likelihood)\b[^.]*$/.test(before)) continue;
-      if (/["']\s*$/.test(before) || /^\s*["']/.test(after)) continue;
-      if (/^\W*(is|remains|would be|was|could be|might be|can't be|cannot be)\s+(still\s+|also\s+)?(a\s+)?(plausible|possible|consistent|within|in the|ruled out|excluded|included)/.test(after)) continue;
-      nullHit = m[0]; break;
-    }
-
-    // 4. conclusion matches the class guide
-    var v = verdict(res.p);
-    var notEnough = /(not|n't|no)\s+(have\s+)?(enough|sufficient|strong enough|adequate|much)\s+(statistical\s+)?evidence|insufficient evidence|lack(s|ing)? (of )?(sufficient |enough )?evidence|not (statistically )?significant|no (statistically )?significant|n't (statistically )?significant|can(not|'t) (say|conclude|tell)|unable to (say|conclude)|(not|n't) (be )?(very |fairly )?confident/.test(t);
-    var t2 = t.replace(/(not|n't)\s+(be\s+)?(very\s+|fairly\s+|that\s+)?confident/g, " ").replace(/\b(90|95|99)\s*(%|percent)\s+(confiden\w*)/g, " ").replace(/confidence interval/g, " ");
-    var confident = /\bconfident\b/.test(t2);
-    var t3 = t.replace(/(not|n't|no)\s+(statistically\s+)?significant(ly)?/g, " ");
-    var signif = /significant/.test(t3) && !/marginal\w*\s+significant/.test(t3);
-    var marginal = /marginal|suggest|more research|further research|further study|more data|weak evidence|some evidence|borderline|hint/.test(t);
-    var pTxt = "p = " + P.p;
-    if (v.key === "confident" || v.key === "fairly") {
-      if ((confident || signif) && !notEnough) {
-        add("pass", "Conclusion", "Your conclusion fits the class guide: with " + pTxt + ", we're " + (v.key === "confident" ? "confident" : "fairly confident") + " there's a difference.");
-        if (v.key === "fairly" && confident && !/fairly confident/.test(t)) add("tip", "How confident?", "With p between .01 and .05, the class guide says “fairly confident.” Save plain “confident” for p below .01.");
-      }
-      else if (notEnough) add("fix", "Conclusion", "With " + pTxt + " (below .05), the class guide says we're " + (v.key === "confident" ? "confident" : "fairly confident") + " the groups differ, but your write-up says there isn't enough evidence.");
-      else add("fix", "Conclusion", "Add a conclusion in words. With " + pTxt + ", say that we're " + (v.key === "confident" ? "confident" : "fairly confident") + " " + g.A.short + " and " + g.B.short + " differ.");
-    } else if (v.key === "marginal") {
-      if (marginal || notEnough) add("pass", "Conclusion", "Your conclusion fits the class guide for " + pTxt + ": marginally significant, not enough to be fairly confident.");
-      else if (confident || signif) add("fix", "Conclusion", pTxt + " is above .05, so that's not enough to be fairly confident. Call it marginally significant, or say we don't have enough evidence to say the groups differ.");
-      else add("fix", "Conclusion", "Add a conclusion in words. With " + pTxt + ", call it marginally significant: it suggests a difference worth more research.");
-    } else {
-      if (notEnough && !(confident && !notEnough)) add("pass", "Conclusion", "Your conclusion fits the class guide: with " + pTxt + ", we don't have enough evidence to say the groups differ.");
-      else if (confident || signif) add("fix", "Conclusion", pTxt + " is above .10, so the class guide says we don't have enough evidence of a difference.");
-      else if (!nullHit) add("fix", "Conclusion", "Add a conclusion in words. With " + pTxt + ", say we don't have enough evidence to say " + g.A.short + " and " + g.B.short + " differ.");
-    }
-
-    // 5. never conclude the null; never "prove"
-    var proves = /\bprov(e|es|ed|en|ing)\b/.test(t);
-    if (nullHit) add("fix", "Don't conclude the null is true", "“" + nullHit.trim() + "” says the groups are the same, and a hypothesis test can never show that. Say we don't have enough evidence to say they differ.");
-    else if (proves) add("fix", "Don't say “prove”", "A hypothesis test can't prove anything. Use “we're fairly confident” or “the evidence suggests.”");
-    else add("pass", "No overclaiming", "You didn't claim the groups are the same or that anything was proven.");
-
-    // 6. p-value misreadings
-    var mis = [
-      /(chance|probability|likelihood|likely)\s+(that\s+)?(the\s+)?(null( hypothesis)?|h0)\s+(is|was)\s+(true|correct|right|false|wrong)/,
-      /(chance|probability|likelihood)\s+(that\s+)?(the\s+|our\s+|my\s+)?(alternative( hypothesis)?|hypothesis|h1|research hypothesis)\s+(is|was)\s+(true|correct|right|wrong|false)/,
-      /(chance|probability|likelihood)\s+(that\s+)?there\s+(is|was|'s)\s+(no|a)\s+(real\s+|true\s+)?(difference|relationship|effect)/,
-      /(chance|probability|likelihood)[^.]{0,40}(due to|by|just|purely|from)\s+(random\s+)?chance/,
-      /(chance|probability|likelihood)\s+(that\s+)?(the\s+)?(results?|findings?|difference)\s+(is|are|was|were)\s+(wrong|false|a fluke|real|true)/
-    ];
-    var misHit = mis.some(function (re) { return re.test(t); });
-    var oneMinus = false;
-    var om = /(\d+(?:\.\d+)?)\s*(%|percent)\s+(sure|confident|certain|chance|likely|probability)/g;
-    while ((m = om.exec(t))) {
-      var val = parseFloat(m[1]);
-      if (Math.abs(val - 95) < 0.01) continue;
-      if (Math.abs(val - 100 * (1 - res.p)) < 1.5) oneMinus = true;
-    }
-    if (misHit) add("fix", "What the p-value means", "The p-value isn't the chance that a hypothesis is true or that the result is “due to chance.” It's how often you'd see a gap this big or bigger if there were really no difference.");
-    else if (oneMinus) add("fix", "What the p-value means", "1 minus the p-value isn't how sure you can be. Use the class language instead (“fairly confident,” “not enough evidence”).");
-    else if (pExact || goodClaim) add("pass", "What the p-value means", "Your p-value statement avoids the common misreadings.");
-
-    // 7. context and plain English
-    var hasA = hasAny(t, g.A.kw), hasB = hasAny(t, g.B.kw), hasO = hasAny(t, o.kw);
-    if (!(hasA && hasB && hasO)) {
-      var miss = [];
-      if (!hasA) miss.push(g.A.short); if (!hasB) miss.push(g.B.short); if (!hasO) miss.push("what was measured (" + o.noun + ")");
-      add("fix", "Put it in context", "Name " + miss.join(", ") + ". A reader should know who was compared and on what, without seeing the printout.");
-    } else add("pass", "In context", "You named both groups and what was measured.");
-    if (/\bh0\b|\bh1\b|\bh_?[01]\b|null hypothesis|alternative hypothesis|reject(ed|ing|s)?\s+the\s+null|fail(ed|s|ing)?\s+to\s+reject|\bt\s*=|\bdf\b|welch/.test(t))
-      add("tip", "Plain English", "Someone without stats training won't know “reject the null,” “H0,” or “t =”. Say it in everyday words, like “we're fairly confident the groups differ.”");
-    if (words < 35) add("tip", "Length", "Short is fine, but give each of the three parts (means, interval, p-value) its own sentence.");
-    return out;
-  }
-  function renderChecks(list) {
-    var box = $("wr-feedback"); box.textContent = "";
-    var fixes = list.filter(function (x) { return x.status === "fix"; }).length;
-    box.appendChild(el("h3", { text: fixes ? fixes + (fixes === 1 ? " thing" : " things") + " to fix" : "Looks solid" }));
-    var ul = el("ul", { class: "checks" });
-    var label = { pass: "Done", fix: "Fix", tip: "Tip" };
-    list.forEach(function (x) {
-      ul.appendChild(el("li", null, [el("span", { class: "tag " + x.status, text: label[x.status] }), el("span", { class: "ck-title", text: x.title }), el("span", { class: "ck-body", text: x.body })]));
-    });
-    box.appendChild(ul);
-    box.appendChild(el("p", { class: "note", text: "The checker matches numbers and phrases, so it can miss things a person would catch. Compare with the example answer too." }));
-  }
-  function wrInit() {
-    $("wr-new").addEventListener("click", wrNew);
-    $("wr-show").addEventListener("click", function () { modelAnswer(wr.item); $("wr-model").scrollIntoView({ behavior: "smooth", block: "nearest" }); });
-    $("wr-check").addEventListener("click", function () {
-      var text = $("wr-text").value;
-      if (!text.trim()) { var b = $("wr-feedback"); b.textContent = ""; b.appendChild(el("p", { class: "fb wrong", text: "Write your interpretation in the box first, then check it." })); return; }
-      renderChecks(checkWriteup(text, wr.item));
-    });
-  }
-
-  /* =========================================================
-     Pick the test
-     ========================================================= */
-  var TESTS = ["Two-sample t-test (independent groups)", "Paired t-test", "ANOVA", "Chi-square test"];
-  function testItem(scenario, answer, explain) {
-    return { scenario: scenario, fixed: true, options: TESTS.map(function (t, i) { return { text: t, ok: i === answer }; }), explain: explain, prompt: "Which test fits best?" };
-  }
-  var BANK = [
-    testItem("You want to know whether relationship quality (1 to 5) differs between people who met their partner online and people who met offline.", 0,
-      "One categorical variable with two groups (online, offline) and one quantitative outcome. Each person is in only one group, so the groups are independent."),
-    testItem("For each different-sex couple in the survey, you compare the man's age with the woman's age to see whether men tend to be older.", 1,
-      "Each couple gives you two related numbers. A paired t-test looks at the difference within each couple."),
-    testItem("You compare relationship quality across four ways of meeting: through friends, at work, at a bar, and online.", 2,
-      "There are more than two groups. ANOVA compares them all at once instead of running several t-tests."),
-    testItem("You want to know whether people who met online are more or less likely to be married (yes or no) than people who met offline.", 3,
-      "Both variables are categorical (met online yes/no, married yes/no), so you compare proportions in a contingency table, as in module 3.1."),
-    testItem("HCMST asked the same people about their relationship quality in 2017 and again in 2022. You want to know whether quality changed for couples who stayed together.", 1,
-      "Same people measured twice: the two sets of answers are linked person by person, so a paired t-test fits."),
-    testItem("You compare respondents' years of education with their own partner's years of education.", 1,
-      "Each respondent is matched with one specific partner, so the two measurements are paired."),
-    testItem("You compare the age gap between partners for married couples and for unmarried couples.", 0,
-      "Two separate groups (married, unmarried) and a quantitative outcome (age gap in years)."),
-    testItem("You compare how many years couples took to move in together across the four US census regions.", 2,
-      "One quantitative outcome compared across more than two groups calls for ANOVA."),
-    testItem("You want to know whether men and women differ in whether they used a dating app in the past year (yes or no).", 3,
-      "Gender and app use are both categorical, so this is a chi-square question about proportions."),
-    { prompt: "What's the problem?", scenario: "A classmate compares relationship quality for couples who met through friends, at work, and online by running three separate t-tests (friends vs. work, friends vs. online, work vs. online).",
-      options: [{ text: "Each extra test adds another chance of a false positive, so the overall Type I error rate climbs above .05.", ok: true },
-        { text: "t-tests can't be used when the outcome is a rating from 1 to 5." },
-        { text: "Three t-tests always give the same answer as one t-test, so it's wasted effort." },
-        { text: "Nothing. Running every pair is the standard approach." }],
-      explain: "This is why 3.2 introduces ANOVA: one test across all the groups keeps the Type I error rate at alpha." },
-    { prompt: "Which t-test assumption is most at risk?", scenario: "You draw 12 people who met online and 12 who met offline. Years from meeting to becoming a couple is very right-skewed: most couples get together within a year, but a few take 20 years or more.",
-      options: [{ text: "Normality", ok: true }, { text: "Independence of observations" }, { text: "Equal variances" }, { text: "None of them" }],
-      explain: "With only 12 per group, the Central Limit Theorem can't rescue a strongly skewed variable. With hundreds per group (as in the full HCMST sample) it's much less of a worry." },
-    { prompt: "Which assumption does this bear on, and what does R do about it?", scenario: "Relationship quality has a standard deviation of 0.92 for people who live apart from their partner and 0.68 for people who live together.",
-      options: [{ text: "Equal variances. R's t.test() runs Welch's version by default, which doesn't assume equal variances.", ok: true },
-        { text: "Normality. R automatically switches to a nonparametric test." },
-        { text: "Independence. R pairs up the observations." },
-        { text: "None. Standard deviations don't matter for a t-test." }],
-      explain: "That's why the printout says “Welch Two Sample t-test.” In this class you can compare the two standard deviations to check this assumption." },
-    { prompt: "What's wrong with this analysis?", scenario: "A researcher surveys both partners in 200 couples, puts all the men in one group and all the women in the other, and runs a two-sample t-test on relationship quality.",
-      options: [{ text: "The groups aren't independent: each man is linked to a woman in the other group, so a paired t-test fits better.", ok: true },
-        { text: "The sample is too small for a t-test." },
-        { text: "Relationship quality isn't a quantitative variable." },
-        { text: "Nothing. Men and women are different groups." }],
-      explain: "Partners in the same couple share a relationship, so their answers are related. Independence of observations is violated." },
-    { prompt: "Which statement fits best?", scenario: "In the full HCMST sample (2,458 people who met offline, 389 who met online), the average relationship quality was 4.50 vs. 4.39 on a 1-to-5 scale, with p = 0.015.",
-      options: [{ text: "It's statistically significant, but a 0.1-point gap on a 5-point scale is small, so it may not matter much in practice.", ok: true },
-        { text: "It's not statistically significant because the difference is small." },
-        { text: "It proves that meeting online makes relationships worse." },
-        { text: "It's practically significant because the p-value is small." }],
-      explain: "Large samples can detect tiny differences. Statistical significance tells you a difference is unlikely to be zero, not that it's big enough to matter." },
-    { prompt: "Which statement fits best?", scenario: "Suppose a small study with 15 people per group found that couples who met through friends rated their relationship 0.6 points higher, with p = 0.12.",
-      options: [{ text: "We don't have enough evidence to say the groups differ, but the gap could matter in practice, and a bigger sample might detect it.", ok: true },
-        { text: "There is no difference between the groups." },
-        { text: "The difference is statistically significant." },
-        { text: "The study proves meeting through friends doesn't matter." }],
-      explain: "A result can be practically meaningful but not statistically significant when the sample is small (a possible Type II error). And never conclude the null is true." },
-    { prompt: "What's the best answer?", scenario: "In HCMST, people who met their partner online had been together 6.5 years on average, compared with 23.9 years for people who met offline (p < 2.2e-16). Does this mean relationships that start online don't last?",
-      options: [{ text: "No. Online dating only became common recently, so most online couples simply haven't had as much time together. The t-test shows a difference, not its cause.", ok: true },
-        { text: "Yes. The p-value is tiny, so online relationships end sooner." },
-        { text: "Yes, because the confidence interval doesn't include 0." },
-        { text: "No, because the sample is too small to tell." }],
-      explain: "A t-test compares averages. Explaining why they differ takes thinking about what else is going on, like when each group of couples met." },
-    { prompt: "Which assumption is most clearly violated?", scenario: "A dating app emails a satisfaction survey to its users and compares people who've used the app for less than a year with people who've used it longer. Only 8% of users answer.",
-      options: [{ text: "Random sampling. The people who chose to answer may differ from those who didn't, so the results may not generalize.", ok: true },
-        { text: "Normality" }, { text: "Equal variances" }, { text: "None. Email surveys are simple random samples." }],
-      explain: "As in 3.2's discussion of assumptions: a self-selected sample is further from a simple random sample than a probability-based design, so interpret with caution." }
-  ];
-  var ch = { order: [], pos: 0, round: 1 };
-  function chRender() {
-    var item = BANK[ch.order[ch.pos]];
-    $("ch-progress").textContent = "Scenario " + (ch.pos + 1) + " of " + BANK.length + (ch.round > 1 ? " · round " + ch.round : "");
-    var box = $("ch-card"); box.textContent = "";
-    var q = { prompt: item.prompt, options: item.fixed ? item.options.slice() : shuffle(item.options.slice()), explain: item.explain };
-    var card = el("div", { class: "stack" });
-    card.appendChild(el("p", { class: "scenario", text: item.scenario }));
-    card.appendChild(renderQuestion(q, 0, "chq-" + ch.pos, null));
-    box.appendChild(card);
-    $("ch-next").textContent = ch.pos === BANK.length - 1 ? "Start over with a new order" : "Next scenario";
-  }
-  function chInit() {
-    ch.order = shuffle(BANK.map(function (_, i) { return i; }));
-    $("ch-next").addEventListener("click", function () {
-      ch.pos++;
-      if (ch.pos >= BANK.length) { ch.pos = 0; ch.round++; ch.order = shuffle(ch.order); }
-      chRender();
-      var lg = document.querySelector("#ch-card legend"); if (lg) lg.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
-    chRender();
   }
 
   /* =========================================================
@@ -1373,10 +859,178 @@
   }
 
   /* =========================================================
-     Tabs, startup
+     Quiz myself: questions about the comparison being explored
      ========================================================= */
-  var TABS = ["explore", "read", "write", "choose"];
-  var started = {};
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; }
+    return a;
+  }
+  function uniqOptions(opts) {
+    var seen = {}, out = [];
+    opts.forEach(function (o) { if (!seen[o.text]) { seen[o.text] = 1; out.push(o); } });
+    return out;
+  }
+  function renderQuestion(q, label, prefix, onAnswer) {
+    var fs = el("fieldset", { class: "q" });
+    fs.appendChild(el("legend", null, [el("span", { class: "qnum", text: label }), q.prompt]));
+    var fb = el("div", { class: "fb", role: "status", hidden: "" });
+    q.options.forEach(function (o, j) {
+      var id = prefix + "-" + j;
+      var inp = el("input", { type: "radio", name: prefix, id: id, value: String(j) });
+      var lab = el("label", { class: "choice", for: id }, [inp, el("span", { text: o.text })]);
+      inp.addEventListener("change", function () {
+        Array.prototype.forEach.call(fs.querySelectorAll(".choice"), function (l) { l.classList.remove("is-right", "is-wrong"); });
+        lab.classList.add(o.ok ? "is-right" : "is-wrong");
+        fb.hidden = false; fb.className = "fb " + (o.ok ? "right" : "wrong"); fb.textContent = "";
+        fb.appendChild(el("strong", { text: o.ok ? "Correct." : "Not quite." }));
+        fb.appendChild(document.createTextNode(o.ok ? q.explain : "Try another answer, or use this hint: " + q.explain));
+        if (onAnswer) onAnswer(!!o.ok);
+      });
+      fs.appendChild(lab);
+    });
+    fs.appendChild(fb);
+    return fs;
+  }
+
+  var QZ_KEYS = ["mean", "median", "spread", "higher", "pval", "pmean", "order", "zero", "signif", "ci", "normal", "welch"];
+  function quizQuestion(key) {
+    var c = ex.c, o = OUT[c.y], g = c.grp, res = ex.res, P = TT.printedPieces(res), sa = ex.stats[0], sb = ex.stats[1];
+    var askB = Math.random() < 0.5, G = askB ? g.B : g.A, sG = askB ? sb : sa, sO = askB ? sa : sb;
+    var mG = askB ? P.mB : P.mA, mO = askB ? P.mA : P.mB;
+    var dirTxt = res.diff >= 0 ? o.more : o.less, includes = res.lo <= 0 && res.hi >= 0;
+    switch (key) {
+      case "mean": return { prompt: "In the R output, what is the average " + o.noun + " for " + G.who + "?",
+        options: [{ text: mG, ok: true }, { text: mO }, { text: P.hi }, { text: P.t }],
+        explain: "Under “sample estimates,” “mean in group " + G.lab + "” is " + mG + "." };
+      case "median": return { prompt: "According to the summary table, what is the median " + o.noun + " for " + G.who + "?",
+        options: [{ text: r2(sG.med), ok: true }, { text: r2(sG.mean) }, { text: r2(sG.q1) }, { text: r2(sG.q3) }, { text: r2(sO.med) }],
+        explain: "The median is the middle answer, the dark line inside the box. For " + G.lab + " it's " + r2(sG.med) + " (the mean is " + r2(sG.mean) + ")." };
+      case "spread": {
+        var ratio = Math.max(sa.sd, sb.sd) / Math.min(sa.sd, sb.sd), same = ratio < 1.1, aBig = sa.sd > sb.sd;
+        return { prompt: "Which group's answers are more spread out?", fixed: true,
+          options: [{ text: g.A.lab, ok: !same && aBig }, { text: g.B.lab, ok: !same && !aBig }, { text: "About the same", ok: same }],
+          explain: "Compare the standard deviations (SD) in the summary table: " + r2(sa.sd) + " for " + g.A.lab + " and " + r2(sb.sd) + " for " + g.B.lab + "." +
+            (same ? " They're within 10% of each other, so the spread is about the same." : "") };
+      }
+      case "higher": {
+        var hiG = res.diff >= 0 ? g.A : g.B, loG = res.diff >= 0 ? g.B : g.A;
+        var d = r2(Math.abs(res.diff)), far = r2(Math.max(Math.abs(res.lo), Math.abs(res.hi))), near = r2(Math.min(Math.abs(res.lo), Math.abs(res.hi)));
+        return { prompt: "Which group has the higher average " + o.noun + ", and by about how much?",
+          options: [{ text: hiG.lab + ", by about " + d + " " + o.unit, ok: true }, { text: loG.lab + ", by about " + d + " " + o.unit },
+            { text: hiG.lab + ", by about " + far + " " + o.unit }, { text: loG.lab + ", by about " + near + " " + o.unit }],
+          explain: P.mA + " − " + P.mB + " = " + r2(res.diff) + ", so " + hiG.lab + " is higher by about " + d + " " + o.unit + ". The ends of the confidence interval are a range for that difference, not the difference itself." };
+      }
+      case "pval": {
+        var note = P.p.charAt(0) === "<" ? " R prints “< 2.2e-16” when the p-value is too small to show. It's essentially zero."
+          : /e/.test(P.p) ? " R uses scientific notation for very small numbers: " + P.p + " means " + res.p.toFixed(Math.min(12, 2 - Math.floor(Math.log10(res.p)))).replace(/0+$/, "") + "." : "";
+        return { prompt: "Which number in the R output is the p-value?",
+          options: [{ text: P.p.charAt(0) === "<" ? P.p + "  (less than 2.2e-16)" : P.p, ok: true }, { text: P.t }, { text: P.df }, { text: P.lo }],
+          explain: "It's on the third line, right after “p-value.” The others are the t statistic, the degrees of freedom (df), and the lower end of the confidence interval." + note };
+      }
+      case "pmean": return { prompt: "What does the p-value (" + pShort(res) + ") mean here?",
+        options: [{ text: "If there were really no difference between these groups in the population, a gap this big or bigger would show up in " + pFreq(res.p) + " of random samples.", ok: true },
+          { text: "There is " + (res.p < 0.001 ? "less than a 0.1%" : "a " + pctStr(res.p)) + " chance that there's no difference between the groups." },
+          { text: "There is " + (res.p < 0.001 ? "more than a 99.9%" : "a " + pctStr(1 - res.p)) + " chance that the hypothesis is true." },
+          { text: "The two groups' averages differ by " + P.p + " " + o.unit + "." }],
+        explain: "That's the definition from 3.2: the probability of a result at least this extreme if there were truly no difference. It is not the chance that either hypothesis is true." };
+      case "order": return { prompt: "The confidence interval in the R output estimates which difference?",
+        options: [{ text: "The average for " + g.A.lab + " minus the average for " + g.B.lab, ok: true },
+          { text: "The average for " + g.B.lab + " minus the average for " + g.A.lab },
+          { text: "The median for " + g.A.lab + " minus the median for " + g.B.lab },
+          { text: "The range that 95% of individual answers fall in" }],
+        explain: "R puts the groups in alphabetical order, so “" + g.A.lab + "” comes first and every difference is " + g.A.lab + " minus " + g.B.lab + ". Here " + P.mA + " − " + P.mB + " = " + r2(res.diff) + "." };
+      case "zero": return { prompt: "Does the 95% confidence interval include 0?", fixed: true,
+        options: [{ text: "Yes", ok: includes }, { text: "No", ok: !includes }],
+        explain: "The interval runs from " + P.lo + " to " + P.hi + ". " + (includes
+          ? "It crosses 0, so “no difference” is still a plausible value. That matches a p-value above .05."
+          : "Both ends are on the same side of 0, so “no difference” isn't a plausible value. That matches a p-value below .05.") };
+      case "signif": return { prompt: "Which conclusion fits this p-value (" + pShort(res) + ")?",
+        options: [{ text: "We're fairly confident that " + g.A.short + " " + dirTxt + " than " + g.B.short + ".", ok: res.p < 0.05 },
+          { text: "We do not have enough evidence to say that " + g.A.short + " and " + g.B.short + " differ in their average " + o.noun + ".", ok: res.p >= 0.05 },
+          { text: "This proves that " + g.A.short + " " + dirTxt + " than " + g.B.short + "." },
+          { text: "There is no difference between " + g.A.short + " and " + g.B.short + "." }],
+        explain: (res.p < 0.05 ? "p is below .05, so we're fairly confident the groups differ." : "p is .05 or higher, so we don't have enough evidence to say the groups differ.") +
+          " A t-test can't prove a difference, and it can never show that there's no difference." };
+      case "ci": return { prompt: "Which sentence correctly interprets the 95% confidence interval?",
+        options: [{ text: ciStatement(c, res), ok: true },
+          { text: "95% of individual people differ by somewhere between " + r2(res.lo) + " and " + r2(res.hi) + " " + o.unit + "." },
+          { text: "There's a 95% chance that the difference in this sample is between " + r2(res.lo) + " and " + r2(res.hi) + " " + o.unit + "." },
+          { text: "The difference between the groups in the population is exactly " + r2(res.diff) + " " + o.unit + "." }],
+        explain: "The interval is about the true average difference in the population. It isn't about individual people, and it isn't about this sample, whose difference we already know (" + r2(res.diff) + ")." };
+      case "normal": return { prompt: "Is normality a concern for this t-test?",
+        options: [{ text: "No. Both groups have at least 30 people, so the Central Limit Theorem makes the sample means close to normal.", ok: true },
+          { text: "Yes. The answers aren't normally distributed, so a t-test can't be used." },
+          { text: "Yes. Normality requires the two groups to be the same size." },
+          { text: "No. Normality only matters for chi-square tests." }],
+        explain: "Here the groups have " + fmtInt(sa.n) + " and " + fmtInt(sb.n) + " people. With 30 or more per group, the t-test is robust to skewed answers. See “Checking the assumptions” on the Explore tab." };
+      case "welch": return { prompt: "Why does the R output say “Welch Two Sample t-test”?",
+        options: [{ text: "R's default t-test doesn't assume the two groups are equally spread out.", ok: true },
+          { text: "The data were weighted to match the US population." },
+          { text: "The two groups have the same number of people." },
+          { text: "Welch is the name of the survey." }],
+        explain: "Welch's version allows unequal standard deviations, so the equal-variances assumption is handled. Here the SDs are " + r2(sa.sd) + " and " + r2(sb.sd) + "." };
+    }
+    return null;
+  }
+
+  var qz = { cid: null, order: [], pos: 0, round: 1, answered: 0, right: 0, q: null };
+  function qzReset() {
+    qz.cid = ex.c.id; qz.order = shuffle(QZ_KEYS.slice()); qz.pos = 0; qz.round = 1; qz.answered = 0; qz.right = 0; qz.q = null;
+  }
+  function qzTable(sa, sb) {
+    var g = ex.c.grp, tbl = $("qz-table"); tbl.textContent = "";
+    var head = el("tr", null, ["Group", "n", "Mean", "SD", "Q1", "Median", "Q3"].map(function (h) { return el("th", { scope: "col", text: h }); }));
+    var body = el("tbody");
+    [[g.A.lab, "var(--series-a)", sa], [g.B.lab, "var(--series-b)", sb]].forEach(function (r) {
+      var s = r[2];
+      body.appendChild(el("tr", null, [el("th", { scope: "row" }, [el("span", { class: "swatch", style: "background:" + r[1] }), r[0]]),
+        el("td", { text: fmtInt(s.n) }), el("td", { text: r2(s.mean) }), el("td", { text: r2(s.sd) }),
+        el("td", { text: r2(s.q1) }), el("td", { text: r2(s.med) }), el("td", { text: r2(s.q3) })]));
+    });
+    tbl.appendChild(el("thead", null, [head])); tbl.appendChild(body);
+  }
+  function qzRender() {
+    if (qz.cid !== ex.c.id) qzReset();
+    var c = ex.c;
+    $("qz-comp").value = c.id;
+    $("qz-who").textContent = "Who's included: " + c.pop + " Everyone in HCMST with answers to both questions.";
+    renderConsole($("qz-out"), c, ex.res, true, false);
+    qzTable(ex.stats[0], ex.stats[1]);
+    qzQuestion();
+  }
+  function qzQuestion() {
+    var key = qz.order[qz.pos], q = quizQuestion(key);
+    q.options = uniqOptions(q.options);
+    if (!q.fixed) shuffle(q.options);
+    qz.q = q;
+    $("qz-progress").textContent = "Question " + (qz.pos + 1) + " of " + qz.order.length + (qz.round > 1 ? " · round " + qz.round : "");
+    var box = $("qz-card"), first = true; box.textContent = "";
+    box.appendChild(renderQuestion(q, (qz.pos + 1) + ".", "qz-" + qz.round + "-" + qz.pos, function (ok) {
+      if (!first) return;
+      first = false; qz.answered++; if (ok) qz.right++;
+      $("qz-score").textContent = qz.right + " of " + qz.answered + " right on the first try for this comparison.";
+    }));
+    $("qz-next").textContent = qz.pos === qz.order.length - 1 ? "Start over with a new order" : "Next question";
+  }
+  function qzInit() {
+    var sel = $("qz-comp");
+    Array.prototype.forEach.call($("ex-comp").children, function (node) { sel.appendChild(node.cloneNode(true)); });
+    sel.addEventListener("change", function () {
+      ex.c = BY_ID[this.value]; $("ex-comp").value = this.value;
+      exDraw(); exRender(false); qzReset(); qzRender(); $("qz-score").textContent = "";
+    });
+    $("qz-next").addEventListener("click", function () {
+      qz.pos++;
+      if (qz.pos >= qz.order.length) { qz.pos = 0; qz.round++; qz.order = shuffle(qz.order); }
+      qzQuestion();
+      var lg = document.querySelector("#qz-card legend"); if (lg) lg.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
+  /* =========================================================
+     Tabs
+     ========================================================= */
+  var TABS = ["explore", "quiz"];
   function showTab(name, focus) {
     if (TABS.indexOf(name) < 0) name = "explore";
     TABS.forEach(function (t) {
@@ -1385,12 +1039,8 @@
       btn.tabIndex = on ? 0 : -1;
       $(t).hidden = !on;
     });
-    if (!started[name]) {
-      started[name] = true;
-      if (name === "read") rdNew();
-      if (name === "write") wrNew();
-    }
     if (name === "explore") exRender(false);
+    if (name === "quiz") qzRender();
     refreshConsoles();
     if (focus) $("tab-" + name).focus();
   }
@@ -1412,13 +1062,15 @@
     window.addEventListener("hashchange", function () { showTab(location.hash.slice(1)); });
   }
 
+  /* =========================================================
+     Startup
+     ========================================================= */
   function init() {
     exInit();
-    $("rd-new").addEventListener("click", rdNew);
-    wrInit();
-    chInit();
+    qzInit();
     limRender();
     tabsInit();
+    exRender(false); // the quiz reads the explore results, so compute them even if the page opens on #quiz
     showTab((location.hash || "#explore").slice(1));
     var lastW = 0, lastFs = 0;
     var ro = new ResizeObserver(function () {
@@ -1433,6 +1085,5 @@
   init();
 
   // exposed for testing
-  function modelText(item) { return [meansSentence(item.c, item.res), ciSentence(item.c, item.res), pSentence(item.c, item.res), practicalSentence(item.c, item.res), soWhat(item.c, item.res, item.full)].join(" "); }
-  window.__couples = { modelText: modelText, checkWriteup: checkWriteup, makeItem: makeItem, COMPS: COMPS, GROUP_FOR: GROUP_FOR, buildQuestions: buildQuestions };
+  window.__couples = { COMPS: COMPS, GROUP_FOR: GROUP_FOR };
 })();

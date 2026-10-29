@@ -1,13 +1,11 @@
 # Comparing Couples
 
-A browser-based review page for STA 145, module 3.2 (two-sample t-tests), built on real data from the How Couples Meet and Stay Together survey (HCMST 2017). Created with the help of Claude AI. 
+A browser-based review page for STA 145, module 3.2 (two-sample t-tests), built on real data from the How Couples Meet and Stay Together survey (HCMST 2017).
 
-Students can:
+The page has two tabs:
 
-- **Explore** 12 comparisons (box plots, the difference in means with its 95% CI, a clickable R printout, a clickable summary table, and an assumptions check).
-- **Read the output**: answer questions about fresh random-sample printouts.
-- **Write it up**: write an interpretation in the Extra Practice format and get feedback from a checker.
-- **Pick the test**: choose between t-tests, paired t-tests, ANOVA and chi-square, and spot assumption problems.
+- **1 Explore**: 12 comparisons, each using everyone in the survey. Box plots, the difference in means with its 95% CI, a clickable R printout, a clickable summary table, a plain-English Direction / Magnitude / Significance reading, and an assumptions check.
+- **2 Quiz myself**: one question at a time about the comparison being explored (the R output, the summary table, the CI, the p-value, and the assumptions), with feedback after each answer.
 
 The bottom of the page also has **See weighted results!** (a `svyttest()` printout with the survey weights), **What questions can't these data answer?**, and **About the data**.
 
@@ -21,14 +19,25 @@ Everything runs in the student's browser. There is no server, no tracking, and n
 | `build.py` | Rebuilds `index.html` from the files in `src/` and `data/`. |
 | `src/template.html` | The page's layout and styles (HTML + CSS). |
 | `src/engine.js` | The statistics: Welch t-test, weighted t-test, and R-style printing. |
-| `src/app.js` | Everything students see and click: comparisons, wording, questions, the checker. |
+| `src/app.js` | Everything students see and click: comparisons, wording, explanations, the quiz. |
 | `data/hcmst_data.json` | The 13 HCMST variables the page uses (plus the survey weight), already built. |
 | `data/build_data.py` | Rebuilds `hcmst_data.json` from the HCMST `.dta` file. |
 | `tests/test_engine.js` | Checks the engine against R's own `t.test()` example. |
 | `tests/check_full_sample.py` | Prints all 12 full-sample results, computed separately with scipy. |
 | `r/check_in_r.R` | Reproduces the full-sample printouts in R (unweighted and weighted). |
 
+## Host it from your `STA145` repository with GitHub Pages
 
+1. **Add the folder.** Put this whole `comparing-couples` folder inside `Kline/supplemental` in [`zdk15001/STA145`](https://github.com/zdk15001/STA145), so the page ends up at `Kline/supplemental/comparing-couples/index.html`.
+   - On github.com: open the supplemental folder, click **Add file → Upload files**, drag in the `comparing-couples` folder, and click **Commit changes**.
+   - Or with git: copy the folder in, then `git add`, `git commit`, `git push`.
+2. **Turn on GitHub Pages** (skip this if the repository already publishes a site). Go to the repository's **Settings → Pages**. Under "Build and deployment," choose **Deploy from a branch**, then branch **main** and folder **/ (root)**, and click **Save**.
+   - If Pages is already set to publish from a `/docs` folder, the page has to live inside `docs/` instead.
+   - On a free GitHub account, Pages only works for **public** repositories.
+3. **Open the page.** After a minute or two it's live at:
+   `https://zdk15001.github.io/STA145/Kline/supplemental/comparing-couples/`
+   (Pages addresses are case-sensitive, so keep the capital K in `Kline`.)
+4. **Share it.** Paste that address into Canvas. Students don't need any accounts.
 
 ## Change the page
 
@@ -44,13 +53,12 @@ Where to find things in `src/app.js` (search for these names):
 |---|---|
 | The 12 comparisons, research questions, hypotheses, and who's included | `var COMPS` |
 | How each outcome is described (labels, units, Direction/Magnitude wording) | `var OUT` |
-| The "So what?" sentences in the Write it up example answers | `var SOWHAT` |
-| The "Pick the test" scenarios | `var BANK` |
+| The quiz questions and their explanations | `function quizQuestion` |
 | The "What questions can't these data answer?" list | `var LIMITS` |
 | What each part of the R printout means when clicked | `function partExplain` |
 | What each summary-table cell means when clicked | `function cellExplain` |
 | The assumptions checks | `function assumptions` |
-| The write-up checker | `function checkWriteup` |
+| The p-value wording ("fairly confident" / "not enough evidence") | `function verdict` |
 
 Text on the page that doesn't change with the data (headings, intros, About the data) is in `src/template.html`.
 

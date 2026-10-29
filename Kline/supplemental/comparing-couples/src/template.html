@@ -1,6 +1,6 @@
 <title>Comparing Couples</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="STA 145 module 3.2 review: practice reading and interpreting Welch t-tests with HCMST dating data.">
+<meta name="description" content="STA 145 module 3.2 review: explore Welch t-tests with HCMST dating data.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&display=swap">
@@ -115,7 +115,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .panel-head p { color: var(--ink-2); max-width: 44rem; }
 .card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1.25rem; display: grid; gap: 1rem; min-width: 0; }
 .stack { display: grid; gap: 0.75rem; min-width: 0; }
-.panel, .card, .stack, .reading, #ex-reading-text, .model, .about, .about .body, ul.checks { grid-template-columns: minmax(0, 1fr); }
+.panel, .card, .stack, .reading, #ex-reading-text, .about, .about .body, ul.checks { grid-template-columns: minmax(0, 1fr); }
 .row { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: end; }
 .row > * { min-width: 0; }
 
@@ -228,7 +228,7 @@ table.summary thead .cellbtn { color: var(--muted); font-weight: 700; }
 fieldset.q { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); padding: 1rem 1.15rem 1.1rem; margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
 fieldset.q legend { font-weight: 700; padding: 0 0.35rem; margin-left: -0.35rem; max-width: 100%; }
 .q .qnum { font-family: var(--font-mono); color: var(--muted); font-weight: 400; margin-right: 0.35rem; }
-.choice { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.5rem 0.65rem; border: 1px solid var(--hair); border-radius: 0.4rem; cursor: pointer; }
+.choice { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.5rem 0.65rem; border: 1px solid var(--hair); border-radius: 0.4rem; cursor: pointer; font-weight: 400; font-size: var(--step-0); color: var(--ink); }
 .choice:hover { border-color: var(--rule); background: var(--paper); }
 .choice input { margin-top: 0.3rem; accent-color: var(--accent); flex: none; width: 1.05rem; height: 1.05rem; }
 .choice span { min-width: 0; overflow-wrap: anywhere; }
@@ -241,12 +241,11 @@ fieldset.q legend { font-weight: 700; padding: 0 0.35rem; margin-left: -0.35rem;
 .fb.right strong { color: var(--good); }
 .fb.wrong strong { color: var(--fix); }
 
-/* ---------- write it up ---------- */
-dl.problem { margin: 0; display: grid; gap: 0.6rem; }
-dl.problem div { display: grid; gap: 0.1rem; }
-dl.problem dt { font-weight: 700; font-size: var(--step--1); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
-dl.problem dd { margin: 0; }
-.prompt { background: var(--accent-wash); border-radius: 0.4rem; padding: 0.75rem 0.9rem; }
+/* ---------- quiz ---------- */
+.progress { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+.quiz-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+
+/* ---------- checklists (assumptions) ---------- */
 ul.checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
 ul.checks li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.7rem; align-items: start; padding: 0.6rem 0.75rem; border-radius: 0.4rem; border: 1px solid var(--hair); background: var(--surface); }
 .tag { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.12rem 0.5rem; border-radius: 999px; }
@@ -255,12 +254,6 @@ ul.checks li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0
 .tag.tip { background: var(--tip-wash); color: var(--tip); }
 ul.checks .ck-title { font-weight: 700; min-width: 0; }
 ul.checks .ck-body { grid-column: 2; color: var(--ink-2); font-size: var(--step--1); min-width: 0; }
-.model { display: grid; gap: 0.6rem; }
-.model ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.45rem; }
-
-/* ---------- pick the test ---------- */
-.progress { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
-.scenario { font-size: var(--step-1); line-height: 1.45; }
 
 /* ---------- about ---------- */
 .about { margin-top: 3rem; display: grid; gap: 1rem; }
@@ -279,17 +272,16 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
   <header class="masthead">
     <p class="eyebrow">STA 145 · Module 3.2 review · Two-sample t-tests</p>
     <h1>Comparing <span class="pair">Couples</span></h1>
-    <p class="lede">Practice reading and writing up t-tests with real survey data on how American couples meet and how their relationships are going.
+    <p class="lede">Explore and quiz yourself on two-sample t-tests with real survey data on how American couples meet and how their relationships are going.
       <small>Every printout is computed from the How Couples Meet and Stay Together survey (HCMST 2017, 3,510 adults), the same way R's <code>t.test()</code> does it.</small></p>
   </header>
 </div>
 
-<nav class="tabs" aria-label="Activities">
+
+<nav class="tabs" aria-label="Sections">
   <div class="wrap tablist" role="tablist">
     <button class="tab" role="tab" id="tab-explore" aria-controls="explore" aria-selected="true"><span class="num">1</span>Explore</button>
-    <button class="tab" role="tab" id="tab-read" aria-controls="read" aria-selected="false" tabindex="-1"><span class="num">2</span>Read the output</button>
-    <button class="tab" role="tab" id="tab-write" aria-controls="write" aria-selected="false" tabindex="-1"><span class="num">3</span>Write it up</button>
-    <button class="tab" role="tab" id="tab-choose" aria-controls="choose" aria-selected="false" tabindex="-1"><span class="num">4</span>Pick the test</button>
+    <button class="tab" role="tab" id="tab-quiz" aria-controls="quiz" aria-selected="false" tabindex="-1"><span class="num">2</span>Quiz myself</button>
   </div>
 </nav>
 
@@ -370,68 +362,33 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     <p class="vh" aria-live="polite" id="ex-live"></p>
   </section>
 
-  <!-- ================= READ ================= -->
-  <section class="panel" id="read" role="tabpanel" aria-labelledby="tab-read" tabindex="0" hidden>
+  <!-- ================= QUIZ ================= -->
+  <section class="panel" id="quiz" role="tabpanel" aria-labelledby="tab-quiz" tabindex="0" hidden>
     <div class="panel-head">
-      <h2>Read the output</h2>
-      <p>Each printout comes from a fresh random sample of HCMST respondents, so you can keep going as long as you like. Answer the questions using only the printout.</p>
+      <h2>Quiz myself</h2>
+      <p>Questions about the comparison you're exploring. The R output and summary table are repeated here, and the Explore tab has the charts and explanations if you need them.</p>
     </div>
     <div class="card">
-      <p class="question-line" id="rd-context"></p>
-      <p class="meta" id="rd-measure"></p>
-    </div>
-    <div class="console" aria-label="R console output">
-      <div class="console-bar"><span class="mono">R console</span></div>
-      <pre id="rd-out"></pre>
-    </div>
-    <div class="stack" id="rd-questions"></div>
-    <p class="meta" id="rd-tally" aria-live="polite"></p>
-    <div class="btns"><button class="btn" type="button" id="rd-new">New printout</button></div>
-  </section>
-
-  <!-- ================= WRITE ================= -->
-  <section class="panel" id="write" role="tabpanel" aria-labelledby="tab-write" tabindex="0" hidden>
-    <div class="panel-head">
-      <h2>Write it up</h2>
-      <p>Same format as the Extra Practice in your workbook. Write your interpretation, then check it. The checker looks for the three required parts and for the mistakes people make most often.</p>
-    </div>
-    <div class="card">
-      <dl class="problem">
-        <div><dt>Research question</dt><dd id="wr-rq"></dd></div>
-        <div><dt>Hypothesis</dt><dd id="wr-hyp"></dd></div>
-        <div><dt>Data collection</dt><dd id="wr-data"></dd></div>
-        <div><dt>Analysis</dt><dd id="wr-analysis"></dd></div>
-      </dl>
-    </div>
-    <div class="console" aria-label="R console output">
-      <div class="console-bar"><span class="mono">R console</span></div>
-      <pre id="wr-out"></pre>
-    </div>
-    <div class="card">
-      <p class="prompt"><b>Interpret the test results in plain English</b> in a way that could be understood by someone unfamiliar with statistics. Your interpretation should include 1) the mean value of the dependent variable for each group, 2) a confidence interval of the difference, and 3) an interpretation of the p-value.</p>
-      <div class="stack">
-        <label for="wr-text">Your interpretation</label>
-        <textarea id="wr-text" spellcheck="true"></textarea>
+      <div class="field wide">
+        <label for="qz-comp">Comparison</label>
+        <select id="qz-comp"></select>
       </div>
-      <div class="btns">
-        <button class="btn" type="button" id="wr-check">Check my write-up</button>
-        <button class="btn quiet" type="button" id="wr-show">Show an example answer</button>
-        <button class="btn quiet" type="button" id="wr-new">New problem</button>
+      <p class="meta" id="qz-who"></p>
+    </div>
+    <div class="quiz-grid">
+      <div class="console" aria-label="R console output">
+        <div class="console-bar"><span class="mono">R console</span><span>Everyone in HCMST</span></div>
+        <pre id="qz-out"></pre>
+      </div>
+      <div class="card">
+        <h3>Summary table</h3>
+        <div class="table-scroll"><table class="summary" id="qz-table"></table></div>
       </div>
     </div>
-    <div class="stack" id="wr-feedback" aria-live="polite"></div>
-    <div class="card model" id="wr-model" hidden></div>
-  </section>
-
-  <!-- ================= CHOOSE ================= -->
-  <section class="panel" id="choose" role="tabpanel" aria-labelledby="tab-choose" tabindex="0" hidden>
-    <div class="panel-head">
-      <h2>Pick the test</h2>
-      <p>Which test fits, and what could go wrong? These scenarios also review paired t-tests, ANOVA, the chi-square test from 3.1, and the assumptions behind a t-test.</p>
-    </div>
-    <p class="progress" id="ch-progress"></p>
-    <div id="ch-card"></div>
-    <div class="btns"><button class="btn" type="button" id="ch-next">Next scenario</button></div>
+    <p class="progress" id="qz-progress"></p>
+    <div id="qz-card"></div>
+    <div class="btns"><button class="btn" type="button" id="qz-next">Next question</button></div>
+    <p class="meta" id="qz-score" aria-live="polite"></p>
   </section>
 
   <!-- ================= ABOUT ================= -->
