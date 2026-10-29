@@ -884,6 +884,17 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     if (s === "-0.00") s = "0.00";
     return s;
   }
+  // "1.138e-14" -> "0.00000000000001138", built from the printed digits so nothing is rounded away
+  function expandSci(str) {
+    var m = /^(\d)(?:\.(\d+))?e-(\d+)$/.exec(str); if (!m) return str;
+    var digits = m[1] + (m[2] || ""), zeros = +m[3] - 1;
+    return "0." + new Array(zeros + 1).join("0") + digits;
+  }
+  function pNote(P) {
+    if (P.p.charAt(0) === "<") return "R prints “< 2.2e-16” when the p-value is smaller than it will display. It isn't zero, but it's tiny: report it as p < .001.";
+    if (/e/.test(P.p)) return "R writes very small numbers in scientific notation: " + P.p + " means " + expandSci(P.p) + ".";
+    return "";
+  }
   function sig3(x) { return String(parseFloat(x.toPrecision(3))); }
   function quantile(sorted, p) {
     var h = (sorted.length - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
@@ -929,9 +940,9 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     return pp.replace(/^0\./, "0.");
   }
   function pFreq(p) {
-    if (p < 1e-6) return "fewer than 1 in a million";
-    if (p < 0.001) return "fewer than 1 in 1,000";
-    return "about " + pctStr(p);
+    if (p < 1e-6) return "fewer than 1 in every million random samples";
+    if (p < 0.001) return "fewer than 1 in every 1,000 random samples";
+    return "about " + pctStr(p) + " of random samples";
   }
   function pctStr(p) {
     if (p < 0.001) return "less than 0.1%";
@@ -949,10 +960,10 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
   // "We're 95 percent confident that, on average, X ... somewhere between L and H ... than Y."
   function ciStatement(c, res) {
     var g = c.grp, o = OUT[c.y], k = o.ci, body;
-    if (res.lo > 0) body = k.pre + " somewhere between " + r2(res.lo) + " and " + r2(res.hi) + " " + o.unit + " " + k.up + k.post;
-    else if (res.hi < 0) body = k.pre + " somewhere between " + r2(-res.hi) + " and " + r2(-res.lo) + " " + o.unit + " " + k.down + k.post;
-    else body = k.pre + " somewhere between " + r2(-res.lo) + " " + o.unit + " " + k.down + " and " + r2(res.hi) + " " + o.unit + " " + k.up + k.post;
-    return "We're 95 percent confident that, on average, " + g.A.short + " " + body + " than " + g.B.short + ".";
+    if (res.lo > 0) body = k.pre + ", on average, somewhere between " + r2(res.lo) + " and " + r2(res.hi) + " " + o.unit + " " + k.up + k.post;
+    else if (res.hi < 0) body = k.pre + ", on average, somewhere between " + r2(-res.hi) + " and " + r2(-res.lo) + " " + o.unit + " " + k.down + k.post;
+    else body = k.pre + ", on average, somewhere between " + r2(-res.lo) + " " + o.unit + " " + k.down + " and " + r2(res.hi) + " " + o.unit + " " + k.up + k.post;
+    return "We're 95 percent confident that, in the population, " + g.A.short + " " + body + " than " + g.B.short + ".";
   }
   function directionSentence(c, res) {
     var g = c.grp, o = OUT[c.y];
@@ -969,7 +980,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
   function pSentence(c, res) {
     var g = c.grp;
     return "The p-value is " + (res.p < 0.001 ? "less than 0.001" : pText(res)) + ". If there were really no difference between " + g.A.short + " and " + g.B.short +
-      " in the population, a gap this big or bigger would show up in " + pFreq(res.p) + " of random samples. " + conclusionSentence(c, res);
+      " in the population, a gap this big or bigger (in either direction) would show up in " + pFreq(res.p) + ". " + conclusionSentence(c, res);
   }
   function commandLine(c, full) {
     return "t.test(" + c.y + " ~ " + c.grp.g + ", data = " + (full ? "hcmst" : "my_sample") + ")";
@@ -1251,8 +1262,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
         "Degrees of freedom. R uses this number to pick the right t distribution when it calculates the p-value. Welch's version adjusts it for unequal spreads and group sizes, so it usually isn't a whole number.",
         "You rarely need to interpret it. Bigger samples give bigger df" + (res.df > 100 ? ", and with df this large the t distribution is almost the same as the normal curve." : ".")] };
       case "p": return { title: "p-value " + (P.p.charAt(0) === "<" ? P.p : "= " + P.p), pill: v, paras: [pSentence(c, res)].concat(
-        P.p.charAt(0) === "<" ? ["R prints “< 2.2e-16” when the p-value is too small to show. It's essentially zero."] :
-        /e/.test(P.p) ? ["R writes very small numbers in scientific notation: " + P.p + " means " + res.p.toFixed(Math.min(12, 2 - Math.floor(Math.log10(res.p)))).replace(/0+$/, "") + "."] : []) };
+        pNote(P) ? [pNote(P)] : []) };
       case "alt": return { title: "alternative hypothesis", paras: [
         "The alternative hypothesis is that the true difference in average " + o.noun + " (" + g.A.lab + " minus " + g.B.lab + ") is not 0. The null hypothesis is that it is 0: no difference in the population.",
         "“Not equal to” makes this a two-sided test, so it looks for a difference in either direction. R lists the groups alphabetically, so " + g.A.lab + " comes first and is the one subtracted from. Older versions of R leave the group names out of this line."] };
@@ -1628,41 +1638,48 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
         explain: "Under “sample estimates,” “mean in group " + G.lab + "” is " + mG + "." };
       case "median": return { prompt: "According to the summary table, what is the median " + o.noun + " for " + G.who + "?",
         options: [{ text: r2(sG.med), ok: true }, { text: r2(sG.mean) }, { text: r2(sG.q1) }, { text: r2(sG.q3) }, { text: r2(sO.med) }],
-        explain: "The median is the middle answer, the dark line inside the box. For " + G.lab + " it's " + r2(sG.med) + " (the mean is " + r2(sG.mean) + ")." };
+        explain: "The median is the middle answer once everyone is sorted: half are at or below it. For " + G.lab + " it's " + r2(sG.med) + " (the mean is " + r2(sG.mean) + ")." +
+          (sG.med === sG.q3 ? " It equals Q3 because so many people gave the same answer, so on the box plot the median line sits on the box's right edge."
+            : sG.med === sG.q1 ? " It equals Q1 because so many people gave the same answer, so on the box plot the median line sits on the box's left edge."
+            : " On the box plot, it's the dark line inside the box.") };
       case "spread": {
-        var ratio = Math.max(sa.sd, sb.sd) / Math.min(sa.sd, sb.sd), same = ratio < 1.1, aBig = sa.sd > sb.sd;
-        return { prompt: "Which group's answers are more spread out?", fixed: true,
-          options: [{ text: g.A.lab, ok: !same && aBig }, { text: g.B.lab, ok: !same && !aBig }, { text: "About the same", ok: same }],
-          explain: "Compare the standard deviations (SD) in the summary table: " + r2(sa.sd) + " for " + g.A.lab + " and " + r2(sb.sd) + " for " + g.B.lab + "." +
-            (same ? " They're within 10% of each other, so the spread is about the same." : "") };
+        var tie = r2(sa.sd) === r2(sb.sd), aBig = sa.sd > sb.sd, bigG = aBig ? g.A : g.B;
+        var boxSame = r2(sa.q1) === r2(sb.q1) && r2(sa.q3) === r2(sb.q3);
+        return { prompt: "According to the summary table, which group has the larger standard deviation (SD)?", fixed: true,
+          options: [{ text: g.A.lab, ok: !tie && aBig }, { text: g.B.lab, ok: !tie && !aBig }].concat(tie ? [{ text: "They're the same", ok: true }] : []),
+          explain: "Read the SD column: " + r2(sa.sd) + " for " + g.A.lab + " and " + r2(sb.sd) + " for " + g.B.lab + "." +
+            (tie ? " They're the same to two decimals." : " So the answers of " + bigG.short + " are more spread out around their average.") +
+            (boxSame ? " The boxes on the box plot look the same because the box shows a different measure of spread, the middle half of the answers (the IQR), which is the same for both groups." : "") +
+            " R's Welch test doesn't need the SDs to be equal." };
       }
       case "higher": {
         var hiG = res.diff >= 0 ? g.A : g.B, loG = res.diff >= 0 ? g.B : g.A;
         var d = r2(Math.abs(res.diff)), far = r2(Math.max(Math.abs(res.lo), Math.abs(res.hi))), near = r2(Math.min(Math.abs(res.lo), Math.abs(res.hi)));
-        return { prompt: "Which group has the higher average " + o.noun + ", and by about how much?",
+        return { prompt: "In this sample, which group has the higher average " + o.noun + ", and by about how much?",
           options: [{ text: hiG.lab + ", by about " + d + " " + o.unit, ok: true }, { text: loG.lab + ", by about " + d + " " + o.unit },
             { text: hiG.lab + ", by about " + far + " " + o.unit }, { text: loG.lab + ", by about " + near + " " + o.unit }],
-          explain: P.mA + " − " + P.mB + " = " + r2(res.diff) + ", so " + hiG.lab + " is higher by about " + d + " " + o.unit + ". The ends of the confidence interval are a range for that difference, not the difference itself." };
+          explain: P.mA + " − " + P.mB + " ≈ " + r2(res.diff) + ", so in this sample " + hiG.lab + " is higher by about " + d + " " + o.unit + "." +
+            (res.p >= 0.05 ? " That's only true of this sample: with p = " + TT.formatPval(res.p, 4) + " and a confidence interval that includes 0, we do not have enough evidence to say the averages are different in the population." : "") +
+            " The ends of the confidence interval are a range of plausible values for the true difference, not the sample difference itself." };
       }
       case "pval": {
-        var note = P.p.charAt(0) === "<" ? " R prints “< 2.2e-16” when the p-value is too small to show. It's essentially zero."
-          : /e/.test(P.p) ? " R uses scientific notation for very small numbers: " + P.p + " means " + res.p.toFixed(Math.min(12, 2 - Math.floor(Math.log10(res.p)))).replace(/0+$/, "") + "." : "";
+        var note = pNote(P) ? " " + pNote(P) : "";
         return { prompt: "Which number in the R output is the p-value?",
           options: [{ text: P.p.charAt(0) === "<" ? P.p + "  (less than 2.2e-16)" : P.p, ok: true }, { text: P.t }, { text: P.df }, { text: P.lo }],
           explain: "It's on the third line, right after “p-value.” The others are the t statistic, the degrees of freedom (df), and the lower end of the confidence interval." + note };
       }
       case "pmean": return { prompt: "What does the p-value (" + pShort(res) + ") mean here?",
-        options: [{ text: "If there were really no difference between these groups in the population, a gap this big or bigger would show up in " + pFreq(res.p) + " of random samples.", ok: true },
+        options: [{ text: "If there were really no difference between these groups in the population, a gap this big or bigger (in either direction) would show up in " + pFreq(res.p) + ".", ok: true },
           { text: "There is " + (res.p < 0.001 ? "less than a 0.1%" : "a " + pctStr(res.p)) + " chance that there's no difference between the groups." },
           { text: "There is " + (res.p < 0.001 ? "more than a 99.9%" : "a " + pctStr(1 - res.p)) + " chance that the hypothesis is true." },
           { text: "The two groups' averages differ by " + P.p + " " + o.unit + "." }],
-        explain: "That's the definition from 3.2: the probability of a result at least this extreme if there were truly no difference. It is not the chance that either hypothesis is true." };
+        explain: "That's the definition from 3.2: the probability of a result at least this extreme if there were truly no difference. Because the test is two-sided, a gap in either direction counts. It is not the chance that either hypothesis is true." };
       case "order": return { prompt: "The confidence interval in the R output estimates which difference?",
-        options: [{ text: "The average for " + g.A.lab + " minus the average for " + g.B.lab, ok: true },
-          { text: "The average for " + g.B.lab + " minus the average for " + g.A.lab },
+        options: [{ text: "The true (population) average for " + g.A.lab + " minus the true average for " + g.B.lab, ok: true },
+          { text: "The true (population) average for " + g.B.lab + " minus the true average for " + g.A.lab },
           { text: "The median for " + g.A.lab + " minus the median for " + g.B.lab },
           { text: "The range that 95% of individual answers fall in" }],
-        explain: "R puts the groups in alphabetical order, so “" + g.A.lab + "” comes first and every difference is " + g.A.lab + " minus " + g.B.lab + ". Here " + P.mA + " − " + P.mB + " = " + r2(res.diff) + "." };
+        explain: "R puts the groups in alphabetical order, so “" + g.A.lab + "” comes first and the t statistic and confidence interval are both " + g.A.lab + " minus " + g.B.lab + ". The sample difference is " + P.mA + " − " + P.mB + " ≈ " + r2(res.diff) + "; the interval is a range of plausible values for the true difference." };
       case "zero": return { prompt: "Does the 95% confidence interval include 0?", fixed: true,
         options: [{ text: "Yes", ok: includes }, { text: "No", ok: !includes }],
         explain: "The interval runs from " + P.lo + " to " + P.hi + ". " + (includes
@@ -1683,18 +1700,26 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
           { text: "There's a 95% chance that the difference in this sample is between " + r2(res.lo) + " and " + r2(res.hi) + " " + o.unit + "." },
           { text: "The difference between the groups in the population is exactly " + r2(res.diff) + " " + o.unit + "." }],
         explain: "The interval is about the true average difference in the population. It isn't about individual people, and it isn't about this sample, whose difference we already know (" + r2(res.diff) + ")." };
-      case "normal": return { prompt: "Is normality a concern for this t-test?",
-        options: [{ text: "No. Both groups have at least 30 people, so the Central Limit Theorem makes the sample means close to normal.", ok: true },
-          { text: "Yes. The answers aren't normally distributed, so a t-test can't be used." },
-          { text: "Yes. Normality requires the two groups to be the same size." },
-          { text: "No. Normality only matters for chi-square tests." }],
-        explain: "Here the groups have " + fmtInt(sa.n) + " and " + fmtInt(sb.n) + " people. With 30 or more per group, the t-test is robust to skewed answers. See “Checking the assumptions” on the Explore tab." };
+      case "normal": {
+        var nmin = Math.min(sa.n, sb.n), kmax = Math.max(Math.abs(skewness(ex.a)), Math.abs(skewness(ex.b))), big = nmin >= 30;
+        return { prompt: "Is normality a concern for this t-test?",
+          options: [{ text: "No. Each group has at least 30 people, so by the Central Limit Theorem the sampling distribution of each group's average is close to normal, even if individual answers are skewed.", ok: big },
+            { text: "Yes. With fewer than 30 people in a group, the t-test relies on the answers themselves being roughly normal.", ok: !big },
+            { text: "Yes. Normality requires the two groups to be the same size." },
+            { text: "No. Normality only matters for chi-square tests." }],
+          explain: "Here the groups have " + fmtInt(sa.n) + " and " + fmtInt(sb.n) + " people." +
+            (big ? " The usual rule of thumb is at least 30 per group." + (kmax > 2
+                ? " These answers are very skewed (skewness " + kmax.toFixed(1) + "), and very skewed variables need more than 30, but groups this large are plenty."
+                : " With groups this large, the averages behave normally even though individual answers aren't perfectly normal.")
+              : " That's fewer than 30, so check whether the answers in each group look roughly normal.") +
+            " Chi-square tests don't assume normality at all. See “Checking the assumptions” on the Explore tab." };
+      }
       case "welch": return { prompt: "Why does the R output say “Welch Two Sample t-test”?",
         options: [{ text: "R's default t-test doesn't assume the two groups are equally spread out.", ok: true },
           { text: "The data were weighted to match the US population." },
           { text: "The two groups have the same number of people." },
           { text: "Welch is the name of the survey." }],
-        explain: "Welch's version allows unequal standard deviations, so the equal-variances assumption is handled. Here the SDs are " + r2(sa.sd) + " and " + r2(sb.sd) + "." };
+        explain: "Welch's version allows unequal standard deviations, so the equal-variances assumption is handled. It also adjusts the degrees of freedom for that, which is why df (" + P.df + ") isn't a whole number. Here the SDs are " + r2(sa.sd) + " and " + r2(sb.sd) + "." };
     }
     return null;
   }
