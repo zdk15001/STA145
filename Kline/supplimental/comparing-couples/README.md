@@ -1,6 +1,6 @@
 # Comparing Couples
 
-A browser-based review page for STA 145, module 3.2 (two-sample t-tests), built on real data from the How Couples Meet and Stay Together survey (HCMST 2017).
+A browser-based review page for STA 145, module 3.2 (two-sample t-tests), built on real data from the How Couples Meet and Stay Together survey (HCMST 2017). Created with the help of Claude AI. 
 
 Students can:
 
@@ -28,18 +28,7 @@ Everything runs in the student's browser. There is no server, no tracking, and n
 | `tests/check_full_sample.py` | Prints all 12 full-sample results, computed separately with scipy. |
 | `r/check_in_r.R` | Reproduces the full-sample printouts in R (unweighted and weighted). |
 
-## Host it from your `sta145` repository with GitHub Pages
 
-1. **Add the folder.** Put this whole `comparing-couples` folder inside the supplemental folder of your `sta145` repository, so the page ends up at `supplemental/comparing-couples/index.html`.
-   - On github.com: open the supplemental folder, click **Add file → Upload files**, drag in the `comparing-couples` folder, and click **Commit changes**.
-   - Or with git: copy the folder in, then `git add`, `git commit`, `git push`.
-2. **Turn on GitHub Pages** (skip this if the repository already publishes a site). Go to the repository's **Settings → Pages**. Under "Build and deployment," choose **Deploy from a branch**, then branch **main** and folder **/ (root)**, and click **Save**.
-   - If Pages is already set to publish from a `/docs` folder, the page has to live inside `docs/` instead.
-   - On a free GitHub account, Pages only works for **public** repositories.
-3. **Open the page.** After a minute or two it's live at:
-   `https://<your-username>.github.io/sta145/supplemental/comparing-couples/`
-   (Use your folder's exact name in the address, including its spelling and capitalization.)
-4. **Share it.** Paste that address into Canvas. Students don't need any accounts.
 
 ## Change the page
 
