@@ -1,0 +1,489 @@
+<title>Comparing Couples</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="STA 145 module 3.2 review: practice reading and interpreting Welch t-tests with HCMST dating data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;700&display=swap">
+<style>
+/* Layout: one reading column; the R printout is the anchor of every activity, set like a console slip. */
+:root {
+  --paper: #f4f5f9;
+  --surface: #ffffff;
+  --ink: #1b1d2a;
+  --ink-2: #474b60;
+  --muted: #646a82;
+  --rule: #d9dce7;
+  --hair: #e8eaf1;
+  --accent: #a3245c;
+  --accent-ink: #ffffff;
+  --accent-wash: #f7e9f0;
+  --console: #eef0f6;
+  --console-ink: #1b1d2a;
+  --good: #1a7238;
+  --good-wash: #e5f3e9;
+  --fix: #b3261e;
+  --fix-wash: #fbe9e7;
+  --tip: #7a5200;
+  --tip-wash: #fbf1dc;
+  --series-a: #2a78d6;
+  --series-b: #eb6834;
+  --focus: #2a59c9;
+
+  --font-display: "Bricolage Grotesque", "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Atkinson Hyperlegible Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --step--1: 0.875rem;
+  --step-0: 1.0625rem;
+  --step-1: 1.25rem;
+  --step-2: 1.6rem;
+  --step-3: clamp(1.55rem, 0.9rem + 3.4vw, 2.9rem);
+  --radius: 0.5rem;
+  --measure: 52rem;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12131a; --surface: #1b1d27; --ink: #eceef6; --ink-2: #b9bdcf; --muted: #9297ad;
+    --rule: #333647; --hair: #282a38; --accent: #f07aa8; --accent-ink: #12131a; --accent-wash: #3a1d2b;
+    --console: #161821; --console-ink: #e4e7f2; --good: #67d18a; --good-wash: #16301f;
+    --fix: #ff8f85; --fix-wash: #3a1a18; --tip: #f0c46a; --tip-wash: #33280f;
+    --series-a: #3987e5; --series-b: #d95926; --focus: #8fb0ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12131a; --surface: #1b1d27; --ink: #eceef6; --ink-2: #b9bdcf; --muted: #9297ad;
+  --rule: #333647; --hair: #282a38; --accent: #f07aa8; --accent-ink: #12131a; --accent-wash: #3a1d2b;
+  --console: #161821; --console-ink: #e4e7f2; --good: #67d18a; --good-wash: #16301f;
+  --fix: #ff8f85; --fix-wash: #3a1a18; --tip: #f0c46a; --tip-wash: #33280f;
+  --series-a: #3987e5; --series-b: #d95926; --focus: #8fb0ff;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 3rem;
+  overflow-wrap: break-word;
+}
+.wrap { max-width: var(--measure); margin-inline: auto; }
+h1, h2, h3 { font-family: var(--font-display); line-height: 1.15; text-wrap: balance; margin: 0; overflow-wrap: anywhere; }
+h2 { font-size: var(--step-2); font-weight: 700; }
+h3 { font-size: var(--step-1); font-weight: 700; }
+p { margin: 0; }
+a { color: var(--accent); }
+code, pre, kbd, .mono { font-family: var(--font-mono); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- masthead ---------- */
+.masthead { padding-block: 2.25rem 1.25rem; display: grid; gap: 0.6rem; }
+.eyebrow { font-size: var(--step--1); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.masthead h1 { font-size: var(--step-3); font-weight: 700; letter-spacing: -0.01em; }
+.masthead h1 .pair { color: var(--accent); }
+.lede { max-width: 40rem; color: var(--ink-2); font-size: var(--step-1); line-height: 1.45; }
+.lede small { display: block; margin-top: 0.4rem; font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- tabs ---------- */
+.tabs { position: static; z-index: 5; background: var(--paper); padding-block: 0.6rem; border-bottom: 1px solid var(--rule); }
+/* sticky only when the bar is short; with very large text it would cover the page */
+@media (min-width: 40em) { .tabs { position: sticky; top: env(safe-area-inset-top, 0px); } }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--paper); }
+.tablist { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.tab {
+  font: inherit; font-size: var(--step--1); font-weight: 700; color: var(--ink-2);
+  background: transparent; border: 1px solid var(--rule); border-radius: 999px;
+  padding: 0.45rem 0.95rem; cursor: pointer; display: inline-flex; gap: 0.45rem; align-items: baseline; text-align: left;
+}
+.tab .num { font-family: var(--font-mono); color: var(--muted); font-weight: 400; }
+.tab:hover { border-color: var(--accent); color: var(--ink); }
+.tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.tab[aria-selected="true"] .num { color: inherit; opacity: 0.8; }
+
+/* ---------- panels ---------- */
+.panel { padding-block: 1.75rem 0; display: grid; gap: 1.5rem; }
+.panel-head { display: grid; gap: 0.5rem; }
+.panel-head p { color: var(--ink-2); max-width: 44rem; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1.25rem; display: grid; gap: 1rem; min-width: 0; }
+.stack { display: grid; gap: 0.75rem; min-width: 0; }
+.panel, .card, .stack, .reading, #ex-reading-text, .model, .about, .about .body, ul.checks { grid-template-columns: minmax(0, 1fr); }
+.row { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; align-items: end; }
+.row > * { min-width: 0; }
+
+label, .label { font-weight: 700; font-size: var(--step--1); color: var(--ink-2); display: block; }
+select, textarea, input[type="text"] {
+  font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--rule);
+  border-radius: 0.4rem; padding: 0.5rem 0.65rem; width: 100%; max-width: 100%;
+}
+select { min-height: 2.6rem; }
+textarea { min-height: 11rem; resize: vertical; line-height: 1.5; }
+.field { display: grid; gap: 0.35rem; flex: 1 1 18rem; }
+.field.narrow { flex: 1 1 14rem; }
+.field.wide { flex: 3 1 22rem; }
+input[type="range"] { width: 100%; accent-color: var(--accent); min-height: 1.75rem; }
+output { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
+
+.btn {
+  font: inherit; font-weight: 700; font-size: var(--step--1); cursor: pointer;
+  border-radius: 0.4rem; padding: 0.6rem 1rem; border: 1px solid var(--accent);
+  background: var(--accent); color: var(--accent-ink); min-height: 2.6rem;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.quiet { background: transparent; color: var(--accent); }
+.btn.quiet:hover { background: var(--accent-wash); filter: none; }
+.btn[disabled] { opacity: 0.45; cursor: not-allowed; filter: none; }
+.btns { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+
+.question-line { font-family: var(--font-display); font-size: var(--step-1); font-weight: 600; line-height: 1.3; }
+.meta { color: var(--muted); font-size: var(--step--1); }
+
+/* ---------- console slip ---------- */
+.console { background: var(--console); color: var(--console-ink); border: 1px solid var(--rule); border-radius: var(--radius); min-width: 0; }
+.console-bar { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding: 0.45rem 0.9rem; border-bottom: 1px solid var(--rule); font-size: var(--step--1); color: var(--muted); }
+.console-bar .mono { font-size: 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.console pre {
+  margin: 0; padding: 0.9rem; font-size: 0.95rem; line-height: 1.45; tab-size: 8;
+  white-space: pre-wrap; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
+}
+.console .cmd { color: var(--muted); }
+.console .cmd b { color: var(--console-ink); font-weight: 400; }
+.note { font-size: var(--step--1); color: var(--muted); }
+
+/* ---------- charts ---------- */
+.chart { position: relative; min-width: 0; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--ink-2); font-family: var(--font-body); }
+.chart .axis line, .chart .axis path { stroke: var(--rule); }
+.chart .grid { stroke: var(--hair); }
+.chart .tick text { fill: var(--muted); font-variant-numeric: tabular-nums; }
+.chart .row-hit { fill: transparent; cursor: default; }
+.chart g.box-row:focus { outline: none; }
+.chart g.box-row:focus .row-hit { stroke: var(--focus); stroke-width: 3; }
+.chart .mean-mark { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+.tooltip {
+  position: absolute; pointer-events: none; z-index: 3; background: var(--surface); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: 0.4rem; padding: 0.55rem 0.7rem; font-size: var(--step--1);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.12); max-width: 18rem; line-height: 1.4;
+}
+.tooltip .key { display: inline-block; width: 1rem; height: 3px; vertical-align: middle; margin-right: 0.4rem; border-radius: 2px; }
+.tooltip b { font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; font-size: var(--step--1); color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 0.45rem; }
+.legend i { width: 0.9rem; height: 0.9rem; border-radius: 3px; display: inline-block; }
+.legend .mean-key { width: 0.7rem; height: 0.7rem; background: var(--ink); transform: rotate(45deg); border-radius: 1px; }
+
+table.summary { border-collapse: collapse; width: 100%; font-size: var(--step--1); font-variant-numeric: tabular-nums; }
+table.summary th, table.summary td { text-align: right; padding: 0.35rem 0.6rem; border-bottom: 1px solid var(--hair); white-space: nowrap; }
+table.summary th:first-child, table.summary td:first-child { text-align: left; }
+table.summary thead th { color: var(--muted); font-weight: 700; border-bottom: 1px solid var(--rule); }
+.table-scroll { overflow-x: auto; min-width: 0; }
+.swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 2px; margin-right: 0.45rem; vertical-align: -0.05rem; }
+
+.reading { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.15rem; display: grid; gap: 0.6rem; }
+.reading p { max-width: 44rem; }
+#ex-reading-text { display: grid; gap: 0.65rem; }
+.axis-title { margin-top: 0.35rem; font-size: var(--step--1); color: var(--ink-2); }
+.verdict { display: inline-block; font-weight: 700; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: var(--step--1); }
+.verdict.strong { background: var(--good-wash); color: var(--good); }
+.verdict.marginal { background: var(--tip-wash); color: var(--tip); }
+.verdict.none { background: var(--hair); color: var(--ink-2); }
+
+
+/* ---------- click-to-explain ---------- */
+.console .hot { cursor: pointer; border-radius: 3px; text-decoration: underline dotted; text-decoration-color: var(--muted); text-underline-offset: 0.22em; }
+.console .hot:hover { background: var(--accent-wash); text-decoration-color: var(--accent); }
+.console .hot.sel { background: var(--accent-wash); text-decoration: underline solid var(--accent); text-decoration-thickness: 2px; }
+.console .hot:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.explain { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 0.9rem 1.1rem; display: grid; gap: 0.5rem; grid-template-columns: minmax(0, 1fr); }
+.explain p { max-width: 46rem; }
+.explain .what { font-family: var(--font-mono); font-size: 0.95rem; font-weight: 700; color: var(--accent); overflow-wrap: anywhere; }
+.explain-hint { color: var(--muted); font-size: var(--step--1); }
+.cellbtn { font: inherit; color: inherit; background: none; border: 0; padding: 0.15rem 0.3rem; margin: -0.15rem -0.3rem; border-radius: 3px; cursor: pointer;
+  text-decoration: underline dotted var(--muted); text-underline-offset: 0.22em; font-variant-numeric: tabular-nums; }
+.cellbtn:hover { background: var(--accent-wash); text-decoration-color: var(--accent); }
+.cellbtn.sel { background: var(--accent-wash); text-decoration: underline solid var(--accent); text-decoration-thickness: 2px; }
+table.summary thead .cellbtn { color: var(--muted); font-weight: 700; }
+.ci-sentence { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); line-height: 1.35; max-width: 44rem; }
+.sowhat { padding-top: 0.6rem; border-top: 1px solid var(--hair); }
+.bottom-line { font-weight: 700; max-width: 46rem; }
+
+/* ---------- what the data can't answer ---------- */
+.lim-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+.lim-q { font: inherit; color: var(--ink); text-align: left; width: 100%; height: 100%; cursor: pointer; background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 0.4rem; padding: 0.6rem 0.8rem; line-height: 1.4; }
+.lim-q:hover { border-color: var(--accent); background: var(--accent-wash); }
+.lim-q.sel { border-color: var(--accent); background: var(--accent-wash); box-shadow: inset 0 0 0 1px var(--accent); }
+.lim-title { font-family: var(--font-display); font-weight: 700; font-size: var(--step-1); line-height: 1.3; }
+
+/* ---------- questions ---------- */
+fieldset.q { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); padding: 1rem 1.15rem 1.1rem; margin: 0; display: grid; gap: 0.6rem; min-width: 0; }
+fieldset.q legend { font-weight: 700; padding: 0 0.35rem; margin-left: -0.35rem; max-width: 100%; }
+.q .qnum { font-family: var(--font-mono); color: var(--muted); font-weight: 400; margin-right: 0.35rem; }
+.choice { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.5rem 0.65rem; border: 1px solid var(--hair); border-radius: 0.4rem; cursor: pointer; }
+.choice:hover { border-color: var(--rule); background: var(--paper); }
+.choice input { margin-top: 0.3rem; accent-color: var(--accent); flex: none; width: 1.05rem; height: 1.05rem; }
+.choice span { min-width: 0; overflow-wrap: anywhere; }
+.choice.is-right { border-color: var(--good); background: var(--good-wash); }
+.choice.is-wrong { border-color: var(--fix); background: var(--fix-wash); }
+.fb { border-radius: 0.4rem; padding: 0.6rem 0.75rem; font-size: var(--step--1); }
+.fb.right { background: var(--good-wash); color: var(--ink); }
+.fb.wrong { background: var(--fix-wash); color: var(--ink); }
+.fb strong { display: inline-block; margin-right: 0.35rem; }
+.fb.right strong { color: var(--good); }
+.fb.wrong strong { color: var(--fix); }
+
+/* ---------- write it up ---------- */
+dl.problem { margin: 0; display: grid; gap: 0.6rem; }
+dl.problem div { display: grid; gap: 0.1rem; }
+dl.problem dt { font-weight: 700; font-size: var(--step--1); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+dl.problem dd { margin: 0; }
+.prompt { background: var(--accent-wash); border-radius: 0.4rem; padding: 0.75rem 0.9rem; }
+ul.checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+ul.checks li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.7rem; align-items: start; padding: 0.6rem 0.75rem; border-radius: 0.4rem; border: 1px solid var(--hair); background: var(--surface); }
+.tag { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 0.12rem 0.5rem; border-radius: 999px; }
+.tag.pass { background: var(--good-wash); color: var(--good); }
+.tag.fix { background: var(--fix-wash); color: var(--fix); }
+.tag.tip { background: var(--tip-wash); color: var(--tip); }
+ul.checks .ck-title { font-weight: 700; min-width: 0; }
+ul.checks .ck-body { grid-column: 2; color: var(--ink-2); font-size: var(--step--1); min-width: 0; }
+.model { display: grid; gap: 0.6rem; }
+.model ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.45rem; }
+
+/* ---------- pick the test ---------- */
+.progress { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+.scenario { font-size: var(--step-1); line-height: 1.45; }
+
+/* ---------- about ---------- */
+.about { margin-top: 3rem; display: grid; gap: 1rem; }
+.about details { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); }
+.about summary { cursor: pointer; padding: 0.85rem 1.15rem; font-weight: 700; font-family: var(--font-display); font-size: var(--step-1); }
+.about .body { padding: 0 1.15rem 1.15rem; display: grid; gap: 0.8rem; }
+.about .body p, .about .body li { max-width: 46rem; }
+.about ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; grid-template-columns: minmax(0, 1fr); }
+.about code { overflow-wrap: anywhere; }
+footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">STA 145 · Module 3.2 review · Two-sample t-tests</p>
+    <h1>Comparing <span class="pair">Couples</span></h1>
+    <p class="lede">Practice reading and writing up t-tests with real survey data on how American couples meet and how their relationships are going.
+      <small>Every printout is computed from the How Couples Meet and Stay Together survey (HCMST 2017, 3,510 adults), the same way R's <code>t.test()</code> does it.</small></p>
+  </header>
+</div>
+
+<nav class="tabs" aria-label="Activities">
+  <div class="wrap tablist" role="tablist">
+    <button class="tab" role="tab" id="tab-explore" aria-controls="explore" aria-selected="true"><span class="num">1</span>Explore</button>
+    <button class="tab" role="tab" id="tab-read" aria-controls="read" aria-selected="false" tabindex="-1"><span class="num">2</span>Read the output</button>
+    <button class="tab" role="tab" id="tab-write" aria-controls="write" aria-selected="false" tabindex="-1"><span class="num">3</span>Write it up</button>
+    <button class="tab" role="tab" id="tab-choose" aria-controls="choose" aria-selected="false" tabindex="-1"><span class="num">4</span>Pick the test</button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ================= EXPLORE ================= -->
+  <section class="panel" id="explore" role="tabpanel" aria-labelledby="tab-explore" tabindex="0">
+    <div class="panel-head">
+      <h2>Explore a comparison</h2>
+      <p>Pick two groups to compare. Every comparison uses everyone in the survey who answered both questions. Click any part of the R printout or the summary table to see what it means.</p>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div class="field wide">
+          <label for="ex-comp">Comparison</label>
+          <select id="ex-comp"></select>
+        </div>
+      </div>
+      <div class="stack">
+        <p class="question-line" id="ex-rq"></p>
+        <p class="meta" id="ex-who"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stack">
+        <h3 id="ex-chart-title">Box plots</h3>
+        <div class="legend" aria-hidden="true">
+          <span><i style="background: var(--series-a)"></i><span id="ex-leg-a"></span></span>
+          <span><i style="background: var(--series-b)"></i><span id="ex-leg-b"></span></span>
+          <span><i class="mean-key"></i>Mean (what the t-test compares)</span>
+        </div>
+      </div>
+      <div class="chart" id="ex-box"></div>
+      <div class="stack">
+        <h3>Difference in means, with its 95% confidence interval</h3>
+        <p class="note" id="ex-ci-caption"></p>
+      </div>
+      <div class="chart" id="ex-ci"></div>
+      <p class="ci-sentence" id="ex-ci-sentence"></p>
+    </div>
+
+    <div class="stack">
+      <div class="console" aria-label="R console output">
+        <div class="console-bar"><span class="mono">R console</span><span id="ex-console-note"></span></div>
+        <pre id="ex-out"></pre>
+      </div>
+      <div class="explain" id="ex-explain" aria-live="polite">
+        <p class="explain-hint">Click or tap any underlined part of the printout to see what it means in plain English.</p>
+      </div>
+    </div>
+
+    <div class="reading">
+      <h3>Reading it in plain English</h3>
+      <div id="ex-reading-text"></div>
+    </div>
+
+    <div class="card">
+      <div class="stack">
+        <h3>Summary table</h3>
+        <p class="note">Click any heading or number for an explanation.</p>
+      </div>
+      <div class="table-scroll"><table class="summary" id="ex-table"></table></div>
+      <div class="explain" id="ex-table-explain" aria-live="polite">
+        <p class="explain-hint">Nothing selected yet. Try the SD for each group, then compare them.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="stack">
+        <h3>Checking the assumptions</h3>
+        <p>It's rare in the social sciences to violate none of the assumptions. The real questions are how much we violated them, and what that means for the result. These update with the comparison.</p>
+      </div>
+      <ul class="checks" id="ex-assume"></ul>
+      <p class="bottom-line" id="ex-assume-bottom"></p>
+    </div>
+    <p class="vh" aria-live="polite" id="ex-live"></p>
+  </section>
+
+  <!-- ================= READ ================= -->
+  <section class="panel" id="read" role="tabpanel" aria-labelledby="tab-read" tabindex="0" hidden>
+    <div class="panel-head">
+      <h2>Read the output</h2>
+      <p>Each printout comes from a fresh random sample of HCMST respondents, so you can keep going as long as you like. Answer the questions using only the printout.</p>
+    </div>
+    <div class="card">
+      <p class="question-line" id="rd-context"></p>
+      <p class="meta" id="rd-measure"></p>
+    </div>
+    <div class="console" aria-label="R console output">
+      <div class="console-bar"><span class="mono">R console</span></div>
+      <pre id="rd-out"></pre>
+    </div>
+    <div class="stack" id="rd-questions"></div>
+    <p class="meta" id="rd-tally" aria-live="polite"></p>
+    <div class="btns"><button class="btn" type="button" id="rd-new">New printout</button></div>
+  </section>
+
+  <!-- ================= WRITE ================= -->
+  <section class="panel" id="write" role="tabpanel" aria-labelledby="tab-write" tabindex="0" hidden>
+    <div class="panel-head">
+      <h2>Write it up</h2>
+      <p>Same format as the Extra Practice in your workbook. Write your interpretation, then check it. The checker looks for the three required parts and for the mistakes people make most often.</p>
+    </div>
+    <div class="card">
+      <dl class="problem">
+        <div><dt>Research question</dt><dd id="wr-rq"></dd></div>
+        <div><dt>Hypothesis</dt><dd id="wr-hyp"></dd></div>
+        <div><dt>Data collection</dt><dd id="wr-data"></dd></div>
+        <div><dt>Analysis</dt><dd id="wr-analysis"></dd></div>
+      </dl>
+    </div>
+    <div class="console" aria-label="R console output">
+      <div class="console-bar"><span class="mono">R console</span></div>
+      <pre id="wr-out"></pre>
+    </div>
+    <div class="card">
+      <p class="prompt"><b>Interpret the test results in plain English</b> in a way that could be understood by someone unfamiliar with statistics. Your interpretation should include 1) the mean value of the dependent variable for each group, 2) a confidence interval of the difference, and 3) an interpretation of the p-value.</p>
+      <div class="stack">
+        <label for="wr-text">Your interpretation</label>
+        <textarea id="wr-text" spellcheck="true"></textarea>
+      </div>
+      <div class="btns">
+        <button class="btn" type="button" id="wr-check">Check my write-up</button>
+        <button class="btn quiet" type="button" id="wr-show">Show an example answer</button>
+        <button class="btn quiet" type="button" id="wr-new">New problem</button>
+      </div>
+    </div>
+    <div class="stack" id="wr-feedback" aria-live="polite"></div>
+    <div class="card model" id="wr-model" hidden></div>
+  </section>
+
+  <!-- ================= CHOOSE ================= -->
+  <section class="panel" id="choose" role="tabpanel" aria-labelledby="tab-choose" tabindex="0" hidden>
+    <div class="panel-head">
+      <h2>Pick the test</h2>
+      <p>Which test fits, and what could go wrong? These scenarios also review paired t-tests, ANOVA, the chi-square test from 3.1, and the assumptions behind a t-test.</p>
+    </div>
+    <p class="progress" id="ch-progress"></p>
+    <div id="ch-card"></div>
+    <div class="btns"><button class="btn" type="button" id="ch-next">Next scenario</button></div>
+  </section>
+
+  <!-- ================= ABOUT ================= -->
+  <section class="about" aria-labelledby="about-h">
+    <h2 id="about-h" class="vh">About this page</h2>
+    <details id="weighted">
+      <summary>See weighted results!</summary>
+      <div class="body">
+        <p class="meta" id="wt-label"></p>
+        <div class="console" aria-label="R console output, weighted">
+          <div class="console-bar"><span class="mono">R console</span><span>survey package</span></div>
+          <pre id="wt-out"></pre>
+        </div>
+        <div class="stack" id="wt-summary"></div>
+      </div>
+    </details>
+    <details id="limits">
+      <summary>What questions can't these data answer?</summary>
+      <div class="body">
+        <p>Every test on this page compares one outcome across two groups, using one survey from 2017. Pick a question to see why the data, as they're set up here, can't answer it, and what it would take.</p>
+        <ul class="lim-list" id="lim-list"></ul>
+        <div class="explain" id="lim-explain" aria-live="polite">
+          <p class="explain-hint">Pick a question above.</p>
+        </div>
+      </div>
+    </details>
+    <details>
+      <summary>About the data</summary>
+      <div class="body">
+        <p>All examples come from the first wave (2017) of <b>How Couples Meet and Stay Together</b> (HCMST 2017–2022 public data, version 2.2, produced by Michael Rosenfeld at Stanford). It surveyed 3,510 US adults about their current or most recent partner, and it purposely includes extra lesbian, gay, and bisexual respondents.</p>
+        <p>The tests here are <b>unweighted</b>, like the <code>t.test()</code> you run in class. A published analysis would use the survey weights, so treat these numbers as practice, not as estimates for the whole US population.</p>
+        <p>Variables used:</p>
+        <ul>
+          <li><code>rel_quality</code>: “How would you describe the quality of your relationship with [partner]?” Flipped so 5 = excellent, 4 = good, 3 = fair, 2 = poor, 1 = very poor. Asked of people currently in a relationship.</li>
+          <li><code>how_met</code>: whether they met their partner online, based on how they described meeting and whether they used an internet site or app.</li>
+          <li><code>marital</code>: married vs. in an unmarried relationship (people currently partnered).</li>
+          <li><code>living</code>: whether they live with their partner.</li>
+          <li><code>couple_type</code>: same-sex vs. different-sex couple.</li>
+          <li><code>met_friends</code>: whether friends of either partner introduced them.</li>
+          <li><code>age_met</code>: age when they first met their partner.</li>
+          <li><code>years_to_couple</code>: years from first meeting to the start of the romantic relationship.</li>
+          <li><code>years_to_movein</code>: years from the start of the relationship to first living together.</li>
+          <li><code>age_gap</code>: absolute difference between the respondent's age and their partner's age.</li>
+          <li><code>app_use</code>: among people who met someone new for dating in the past year, whether they used a phone app to do it.</li>
+          <li><code>rel_years</code>: years since the relationship started (as of July 2017).</li>
+        </ul>
+      </div>
+    </details>
+    <footer>Practice tool for STA 145. Numbers are computed live in your browser from the survey data; nothing you type leaves this page.</footer>
+  </section>
+</main>
+
+<script type="application/json" id="hcmst-data">/*DATA*/</script>
+<script>/*ENGINE*/</script>
+<script>/*APP*/</script>
