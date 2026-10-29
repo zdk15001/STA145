@@ -21,16 +21,16 @@ describe(data)
 
 # Phase 3: Comparing Groups -----------------------------------------------
 ### TEST 1
-t.test(data$conservativism ~ data$father_degree)
+
 
 ### TEST 2
-t.test(data$conservativism ~ data$rural)
+
 
 ### TEST 3
 
 
 ### TEST 4
-t.test(data$MNTLHLTH ~ data$rural)
+
 
 ### TEST 5
 
