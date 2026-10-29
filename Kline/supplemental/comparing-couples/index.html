@@ -188,7 +188,15 @@ table.summary thead th { color: var(--muted); font-weight: 700; border-bottom: 1
 .table-scroll { overflow-x: auto; min-width: 0; }
 .swatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 2px; margin-right: 0.45rem; vertical-align: -0.05rem; }
 
-.reading { background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.15rem; display: grid; gap: 0.6rem; }
+.reading { position: relative; background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: 1rem 1.15rem; display: grid; gap: 0.6rem; }
+.term { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 0 0.1rem; margin: 0 -0.1rem; border-radius: 3px; cursor: help;
+  text-decoration: underline dotted; text-decoration-thickness: 2px; text-underline-offset: 0.22em; }
+.term:hover, .term[aria-expanded="true"] { background: var(--accent-wash); text-decoration-style: solid; }
+.term-tip { position: absolute; z-index: 4; width: min(26rem, calc(100% - 1rem)); background: var(--surface); color: var(--ink); border: 1px solid var(--rule);
+  border-radius: 0.5rem; padding: 0.8rem 0.95rem; box-shadow: 0 10px 28px rgb(0 0 0 / 0.16); display: grid; gap: 0.5rem; font-size: var(--step--1); line-height: 1.5; }
+.term-tip p { margin: 0; max-width: none; }
+.term-tip-title { font-weight: 700; color: var(--accent); }
+.term-tip-note { color: var(--muted); }
 .reading p { max-width: 44rem; }
 #ex-reading-text { display: grid; gap: 0.65rem; }
 .axis-title { margin-top: 0.35rem; font-size: var(--step--1); color: var(--ink-2); }
@@ -684,6 +692,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
       desc: "“How would you describe the quality of your relationship?” scored 1 = very poor, 2 = poor, 3 = fair, 4 = good, 5 = excellent.",
       noun: "relationship quality rating", unit: "points", up: "higher", down: "lower",
       ci: { pre: "rate their relationships", up: "higher", down: "lower", post: "" },
+      scale: " (on a 1-to-5 scale)",
       more: "rate their relationships higher", less: "rate their relationships lower",
       mag: function (v, up) { return "rate their relationships " + v + " points " + (up ? "higher" : "lower") + " on average, on a 1-to-5 scale"; },
       verb: function (v) { return "rated their relationship " + v + " out of 5 on average"; },
@@ -929,10 +938,13 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     var pct = p * 100; return String(parseFloat(pct.toPrecision(pct < 10 ? 2 : 3))) + "%";
   }
 
+  // Significance never states a direction: the test is two-sided, so it only asks whether the averages are different.
+  function differentClause(c) { return "the average " + OUT[c.y].noun + " is different for " + c.grp.A.short + " and " + c.grp.B.short; }
+  function fairlyConfident(c) { return "We're fairly confident that " + differentClause(c); }
+  function notEnough(c) { return "We do not have enough evidence to say that " + differentClause(c); }
   function conclusionSentence(c, res) {
-    var g = c.grp, o = OUT[c.y];
-    if (res.p < 0.05) return "Because p is below .05, we're fairly confident that " + g.A.short + " " + (res.diff >= 0 ? o.more : o.less) + " than " + g.B.short + ".";
-    return "Because p is .05 or higher, we do not have enough evidence to say that " + g.A.short + " and " + g.B.short + " differ in their average " + o.noun + ".";
+    if (res.p < 0.05) return "Because p is below .05, we're fairly confident that " + differentClause(c) + ".";
+    return "Because p is .05 or higher, we do not have enough evidence to say that " + differentClause(c) + ".";
   }
   // "We're 95 percent confident that, on average, X ... somewhere between L and H ... than Y."
   function ciStatement(c, res) {
@@ -952,9 +964,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
   }
   function pShort(res) { return res.p < 0.001 ? "p < 0.001" : "p = " + TT.formatPval(res.p, 4); }
   function significanceSentence(c, res) {
-    var g = c.grp, o = OUT[c.y];
-    if (res.p < 0.05) return "We're fairly confident that " + g.A.short + " " + (res.diff >= 0 ? o.more : o.less) + " than " + g.B.short + " (" + pShort(res) + ").";
-    return "We do not have enough evidence to say that " + g.A.short + " and " + g.B.short + " differ in their average " + o.noun + " (" + pShort(res) + ").";
+    return (res.p < 0.05 ? fairlyConfident(c) : notEnough(c)) + " (" + pShort(res) + ").";
   }
   function pSentence(c, res) {
     var g = c.grp;
@@ -1394,10 +1404,14 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     $("ex-ci-sentence").textContent = ciStatement(c, res);
 
     // plain English: direction, magnitude, significance
-    var box = $("ex-reading-text"); box.textContent = "";
+    var box = $("ex-reading-text"); box.textContent = ""; tipState.pinned = false;
     var part = function (label, text) { box.appendChild(el("p", null, [el("b", { text: label + ": " }), text])); };
     part("Direction", directionSentence(c, res));
-    part("Magnitude", magnitudeSentence(c, res) + " Is that magnitude practically significant? You tell me!");
+    var mag = el("p", null, [el("b", { text: "Magnitude: " }), magnitudeSentence(c, res) + " Is that magnitude practically significant? "]);
+    var termBtn = el("button", { type: "button", class: "term", id: "ps-term", "aria-expanded": "false", "aria-describedby": "ps-tip" }, ["You tell me!"]);
+    mag.appendChild(termBtn);
+    box.appendChild(mag);
+    box.appendChild(practicalTip(c, res, sa, sb));
     part("Significance", significanceSentence(c, res));
 
     exTable(sa, sb); exCellSel(); exCellExplain();
@@ -1411,6 +1425,53 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     exWeighted();
     exExplain();
     if (announce) $("ex-live").textContent = "p = " + TT.printedPieces(res).p + ". Difference " + r2(res.diff) + ", 95% confidence interval " + r2(res.lo) + " to " + r2(res.hi) + ".";
+  }
+  /* "You tell me!" tooltip: practical significance, in the workbook's language, for this comparison */
+  function practicalTip(c, res, sa, sb) {
+    var g = c.grp, o = OUT[c.y];
+    var tip = el("div", { class: "term-tip", id: "ps-tip", role: "tooltip", hidden: "" });
+    tip.appendChild(el("p", { class: "term-tip-title", text: "Practical significance" }));
+    tip.appendChild(el("p", { text: "Practical significance considers whether a difference is large or meaningful enough to have real-world implications, regardless of the p-value. It addresses the question: “Is this result important in a real-world context?”" }));
+    tip.appendChild(el("p", { text: "Here, ask: is a difference of " + r2(Math.abs(res.diff)) + " " + o.unit + " in the average " + o.noun + (o.scale || "") +
+      ", between " + g.A.short + " and " + g.B.short + ", important in a real-world context?" }));
+    tip.appendChild(el("p", { text: "To help you decide, compare it with the spread inside each group: individual people typically sit about " + r2(sa.sd) + " " + o.unit + " (" + g.A.lab.replace(/_/g, " ") +
+      ") and " + r2(sb.sd) + " " + o.unit + " (" + g.B.lab.replace(/_/g, " ") + ") from their group's average. Those are the standard deviations." }));
+    tip.appendChild(el("p", { class: "term-tip-note", text: "Statistical significance is a separate question: whether the difference is unlikely to be due to random chance alone. A result can be one without the other." }));
+    return tip;
+  }
+  var tipState = { pinned: false, hideTimer: null };
+  function tipEls() { return { btn: $("ps-term"), tip: $("ps-tip") }; }
+  function showTip() {
+    var e = tipEls(); if (!e.btn || !e.tip) return;
+    clearTimeout(tipState.hideTimer);
+    e.tip.hidden = false; e.btn.setAttribute("aria-expanded", "true");
+    var host = e.tip.offsetParent || e.tip.parentNode, hr = host.getBoundingClientRect(), br = e.btn.getBoundingClientRect();
+    var left = Math.max(8, Math.min(br.left - hr.left, hr.width - e.tip.offsetWidth - 8));
+    e.tip.style.left = left + "px"; e.tip.style.top = (br.bottom - hr.top + 6) + "px";
+  }
+  function hideTip(force) {
+    var e = tipEls(); if (!e.tip) return;
+    if (tipState.pinned && !force) return;
+    if (force) tipState.pinned = false;
+    e.tip.hidden = true; if (e.btn) e.btn.setAttribute("aria-expanded", "false");
+  }
+  function laterHideTip() { clearTimeout(tipState.hideTimer); tipState.hideTimer = setTimeout(function () { hideTip(false); }, 150); }
+  function tipInit() {
+    var box = $("ex-reading-text");
+    box.addEventListener("mouseover", function (e) { if (e.target.closest("#ps-term, #ps-tip")) showTip(); });
+    box.addEventListener("mouseout", function (e) {
+      var to = e.relatedTarget;
+      if (e.target.closest("#ps-term, #ps-tip") && !(to && to.closest && to.closest("#ps-term, #ps-tip"))) laterHideTip();
+    });
+    box.addEventListener("focusin", function (e) { if (e.target.id === "ps-term") showTip(); });
+    box.addEventListener("focusout", function (e) { if (e.target.id === "ps-term") laterHideTip(); });
+    box.addEventListener("click", function (e) {
+      if (!e.target.closest("#ps-term")) return;
+      tipState.pinned = !tipState.pinned;
+      if (tipState.pinned) showTip(); else hideTip(true);
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") hideTip(true); });
+    document.addEventListener("click", function (e) { if (tipState.pinned && !e.target.closest("#ps-term, #ps-tip")) hideTip(true); });
   }
   function exWeighted() {
     var c = ex.c, g = c.grp, o = OUT[c.y], y = COL[c.y], gr = COL[c.grp.g], wt = COL.weight;
@@ -1433,9 +1494,9 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     box.appendChild(el("p", { text: "Unweighted: " + g.A.short + " " + o.mag(r2(Math.abs(u.diff)), u.diff >= 0) + " (95% CI " + r2(u.lo) + " to " + r2(u.hi) + ", " + pShort(u) + ")." }));
     var change;
     if (!dirSame) change = "Weighting flips the direction of the difference.";
-    else if (sigU && !sigW) change = "Weighting changes the conclusion: with the weights, we do not have enough evidence to say that " + g.A.short + " and " + g.B.short + " differ in their average " + o.noun + ".";
-    else if (!sigU && sigW) change = "Weighting changes the conclusion: with the weights, we're fairly confident that " + g.A.short + " " + (wd >= 0 ? o.more : o.less) + " than " + g.B.short + ".";
-    else change = "Weighting " + (Math.abs(Math.abs(wd) - Math.abs(u.diff)) < 0.05 * Math.abs(u.diff) ? "barely moves the estimate" : "moves the estimate " + (Math.abs(wd) < Math.abs(u.diff) ? "closer to 0" : "further from 0")) + ", but the conclusion is the same: " + (sigW ? "we're fairly confident the groups differ." : "we do not have enough evidence to say the groups differ.");
+    else if (sigU && !sigW) change = "Weighting changes the conclusion: with the weights, we do not have enough evidence to say that " + differentClause(c) + ".";
+    else if (!sigU && sigW) change = "Weighting changes the conclusion: with the weights, we're fairly confident that " + differentClause(c) + ".";
+    else change = "Weighting " + (Math.abs(Math.abs(wd) - Math.abs(u.diff)) < 0.05 * Math.abs(u.diff) ? "barely moves the estimate" : "moves the estimate " + (Math.abs(wd) < Math.abs(u.diff) ? "closer to 0" : "further from 0")) + ", but the conclusion is the same: " + (sigW ? "we're fairly confident the averages are different." : "we do not have enough evidence to say the averages are different.");
     box.appendChild(el("p", { class: "bottom-line", text: change }));
     box.appendChild(el("p", { class: "note", text: "svyttest() subtracts the other way (" + g.B.lab + " minus " + g.A.lab + "), so its numbers have the opposite sign from t.test()." }));
   }
@@ -1560,7 +1621,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     var c = ex.c, o = OUT[c.y], g = c.grp, res = ex.res, P = TT.printedPieces(res), sa = ex.stats[0], sb = ex.stats[1];
     var askB = Math.random() < 0.5, G = askB ? g.B : g.A, sG = askB ? sb : sa, sO = askB ? sa : sb;
     var mG = askB ? P.mB : P.mA, mO = askB ? P.mA : P.mB;
-    var dirTxt = res.diff >= 0 ? o.more : o.less, includes = res.lo <= 0 && res.hi >= 0;
+    var includes = res.lo <= 0 && res.hi >= 0;
     switch (key) {
       case "mean": return { prompt: "In the R output, what is the average " + o.noun + " for " + G.who + "?",
         options: [{ text: mG, ok: true }, { text: mO }, { text: P.hi }, { text: P.t }],
@@ -1607,13 +1668,15 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
         explain: "The interval runs from " + P.lo + " to " + P.hi + ". " + (includes
           ? "It crosses 0, so “no difference” is still a plausible value. That matches a p-value above .05."
           : "Both ends are on the same side of 0, so “no difference” isn't a plausible value. That matches a p-value below .05.") };
-      case "signif": return { prompt: "Which conclusion fits this p-value (" + pShort(res) + ")?",
-        options: [{ text: "We're fairly confident that " + g.A.short + " " + dirTxt + " than " + g.B.short + ".", ok: res.p < 0.05 },
-          { text: "We do not have enough evidence to say that " + g.A.short + " and " + g.B.short + " differ in their average " + o.noun + ".", ok: res.p >= 0.05 },
-          { text: "This proves that " + g.A.short + " " + dirTxt + " than " + g.B.short + "." },
-          { text: "There is no difference between " + g.A.short + " and " + g.B.short + "." }],
-        explain: (res.p < 0.05 ? "p is below .05, so we're fairly confident the groups differ." : "p is .05 or higher, so we don't have enough evidence to say the groups differ.") +
-          " A t-test can't prove a difference, and it can never show that there's no difference." };
+      case "signif": return { prompt: "Which conclusion fits this p-value (" + pShort(res) + ")?", fixed: true,
+        options: [{ text: fairlyConfident(c) + ".", ok: res.p < 0.05 },
+          { text: notEnough(c) + ".", ok: res.p >= 0.05 },
+          { text: "This proves that " + differentClause(c) + "." },
+          { text: "This shows that the average " + o.noun + " is the same for " + g.A.short + " and " + g.B.short + "." }],
+        explain: (res.p < 0.05
+          ? "p is below .05, so we're fairly confident the averages are different. The test is two-sided: it asks whether the groups are different, not which one is higher. The means and the confidence interval show the direction."
+          : "p is .05 or higher, so we do not have enough evidence to say the averages are different. That isn't the same as showing they're the same.") +
+          " A t-test can't prove anything, and it can never show that the groups are the same." };
       case "ci": return { prompt: "Which sentence correctly interprets the 95% confidence interval?",
         options: [{ text: ciStatement(c, res), ok: true },
           { text: "95% of individual people differ by somewhere between " + r2(res.lo) + " and " + r2(res.hi) + " " + o.unit + "." },
@@ -1730,6 +1793,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
      ========================================================= */
   function init() {
     exInit();
+    tipInit();
     qzInit();
     limRender();
     tabsInit();

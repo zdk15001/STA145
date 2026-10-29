@@ -4,7 +4,7 @@ A browser-based review page for STA 145, module 3.2 (two-sample t-tests), built 
 
 The page has two tabs:
 
-- **1 Explore**: 12 comparisons, each using everyone in the survey. Box plots, the difference in means with its 95% CI, a clickable R printout, a clickable summary table, a plain-English Direction / Magnitude / Significance reading, and an assumptions check.
+- **1 Explore**: 12 comparisons, each using everyone in the survey. Box plots, the difference in means with its 95% CI, a clickable R printout, a clickable summary table, a plain-English Direction / Magnitude / Significance reading (hover "You tell me!" for practical significance), and an assumptions check.
 - **2 Quiz myself**: one question at a time about the comparison being explored (the R output, the summary table, the CI, the p-value, and the assumptions), with feedback after each answer.
 
 The bottom of the page also has **See weighted results!** (a `svyttest()` printout with the survey weights), **What questions can't these data answer?**, and **About the data**.
@@ -58,7 +58,8 @@ Where to find things in `src/app.js` (search for these names):
 | What each part of the R printout means when clicked | `function partExplain` |
 | What each summary-table cell means when clicked | `function cellExplain` |
 | The assumptions checks | `function assumptions` |
-| The p-value wording ("fairly confident" / "not enough evidence") | `function verdict` |
+| The significance wording ("fairly confident that the average … is different", "do not have enough evidence to say …") | `function differentClause` |
+| The "You tell me!" practical significance hover | `function practicalTip` |
 
 Text on the page that doesn't change with the data (headings, intros, About the data) is in `src/template.html`.
 
