@@ -143,6 +143,25 @@ output { font-family: var(--font-mono); font-weight: 700; color: var(--ink); }
 .btn[disabled] { opacity: 0.45; cursor: not-allowed; filter: none; }
 .btns { display: flex; flex-wrap: wrap; gap: 0.6rem; }
 
+/* comparison picker: the control that drives the whole page, so it gets the most visual weight */
+.picker { background: var(--accent-wash); border: 2px solid var(--accent); padding: 1.25rem 1.35rem; gap: 0.85rem; }
+/* sizes shrink with very narrow screens but never below the base text size (keeps the 28pt minimum when text is enlarged) */
+.picker-label { font-family: var(--font-display); font-size: min(var(--step-2), max(1rem, 8.5vw)); font-weight: 700; color: var(--ink); letter-spacing: -0.005em; }
+.select-wrap { position: relative; min-width: 0; font-size: min(var(--step-1), max(1rem, 7vw)); }
+.select-wrap select {
+  appearance: none; -webkit-appearance: none; width: 100%; min-height: 2.9em; cursor: pointer;
+  font-family: var(--font-body); font-size: 1em; font-weight: 700; color: var(--ink);
+  background: var(--surface); border: 2px solid var(--accent); border-radius: 0.55rem;
+  padding: 0.55em 2.5em 0.55em 0.75em; text-overflow: ellipsis;
+}
+.select-wrap select:hover { box-shadow: 0 0 0 4px var(--accent-wash), 0 0 0 5px var(--accent); }
+.select-wrap select:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.select-wrap select option, .select-wrap select optgroup { font-size: var(--step-0); }
+.select-wrap::after {
+  content: ""; position: absolute; right: 0.95em; top: 50%; width: 0.55em; height: 0.55em; pointer-events: none;
+  border-right: 3px solid var(--accent); border-bottom: 3px solid var(--accent); transform: translateY(-70%) rotate(45deg);
+}
+.picker .question-line { font-size: min(var(--step-1), max(1rem, 7vw)); }
 .question-line { font-family: var(--font-display); font-size: var(--step-1); font-weight: 600; line-height: 1.3; }
 .meta { color: var(--muted); font-size: var(--step--1); }
 
@@ -302,13 +321,9 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
       <p>Pick two groups to compare. Every comparison uses everyone in the survey who answered both questions. Click any part of the R printout or the summary table to see what it means.</p>
     </div>
 
-    <div class="card">
-      <div class="row">
-        <div class="field wide">
-          <label for="ex-comp">Comparison</label>
-          <select id="ex-comp"></select>
-        </div>
-      </div>
+    <div class="card picker">
+      <label class="picker-label" for="ex-comp">Choose a comparison</label>
+      <div class="select-wrap"><select id="ex-comp"></select></div>
       <div class="stack">
         <p class="question-line" id="ex-rq"></p>
         <p class="meta" id="ex-who"></p>
@@ -376,12 +391,13 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
       <h2>Quiz myself</h2>
       <p>Questions about the comparison you're exploring. The R output and summary table are repeated here, and the Explore tab has the charts and explanations if you need them.</p>
     </div>
-    <div class="card">
-      <div class="field wide">
-        <label for="qz-comp">Comparison</label>
-        <select id="qz-comp"></select>
+    <div class="card picker">
+      <label class="picker-label" for="qz-comp">Choose a comparison</label>
+      <div class="select-wrap"><select id="qz-comp"></select></div>
+      <div class="stack">
+        <p class="question-line" id="qz-rq"></p>
+        <p class="meta" id="qz-who"></p>
       </div>
-      <p class="meta" id="qz-who"></p>
     </div>
     <div class="quiz-grid">
       <div class="console" aria-label="R console output">
@@ -1744,6 +1760,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     if (qz.cid !== ex.c.id) qzReset();
     var c = ex.c;
     $("qz-comp").value = c.id;
+    $("qz-rq").textContent = c.rq;
     $("qz-who").textContent = "Who's included: " + c.pop + " Everyone in HCMST with answers to both questions.";
     renderConsole($("qz-out"), c, ex.res, true, false);
     qzTable(ex.stats[0], ex.stats[1]);

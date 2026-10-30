@@ -1073,6 +1073,7 @@
     if (qz.cid !== ex.c.id) qzReset();
     var c = ex.c;
     $("qz-comp").value = c.id;
+    $("qz-rq").textContent = c.rq;
     $("qz-who").textContent = "Who's included: " + c.pop + " Everyone in HCMST with answers to both questions.";
     renderConsole($("qz-out"), c, ex.res, true, false);
     qzTable(ex.stats[0], ex.stats[1]);
