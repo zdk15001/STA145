@@ -126,7 +126,7 @@ plot4 <- ggplot(math_scores, aes(x = score, y = teaching_method, label = name, f
   geom_point(shape = 21, size = 3, stroke = 0.5) +
   geom_text(size = 3, nudge_x = 1, nudge_y = 0.2) +
   geom_vline(data = mean_scores, aes(xintercept = score, color = teaching_method), linetype = "solid", show.legend = FALSE) +
-  geom_text(data = mean_scores, aes(x = score, y = teaching_method, label = paste("Mean:", round(score, 2))), size = 3, vjust = 2, color = "black") +
+  geom_text(data = mean_scores, aes(x = score, y = teaching_method, label = paste("Mean:", round(score, 1))), size = 5, vjust = 2, color = "black") +
   scale_fill_manual(values = c("Traditional" = "blue", "Interactive" = "orange", "Project-based" = "green")) +
   labs(title = "Math Scores by Teaching Method", x = "Score", y = "Teaching Method")
 
