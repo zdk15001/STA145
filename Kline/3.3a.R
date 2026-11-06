@@ -2,21 +2,21 @@
 library(ggplot2)
 
 # Define Bill Size data
-Bill_Size <- c(22, 15, 10, 35, 40, 55, 30, 60, 45, 33, 25, 48, 37, 43, 55, 60)
+bill_size <- c(22, 15, 10, 35, 40, 55, 30, 60, 45, 33, 25, 48, 37, 43, 55, 60)
 
 # Define Tip based on a beta (slope) of 0.2 and add random noise
 set.seed(123)  # For reproducibility
-Tip <- 0.2 * Bill_Size + rnorm(length(Bill_Size), mean = 0, sd = 1.5)  # Adding noise to simulate real data
+tip <- 0.2 * bill_Size + rnorm(length(bill_Size), mean = 0, sd = 1.5)  # Adding noise to simulate real data
 
 # Combine into a data frame
-data <- data.frame(Bill_Size = Bill_Size, Tip = Tip)
+data <- data.frame(bill_size = bill_size, tip = Tip)
 
 # calc mean
-mean(data$Bill_Size)
-mean(data$Tip)
+mean(data$bill_size)
+mean(data$tip)
 
 # Create scatter plot
-ggplot(data, aes(x = Bill_Size, y = Tip)) +
+ggplot(data, aes(x = bill_size, y = tip)) +
   geom_point() +
   labs(title = "Relationship Between Bill Size and Tip Amount",
        x = "Bill Size ($)",
@@ -25,5 +25,5 @@ ggplot(data, aes(x = Bill_Size, y = Tip)) +
   theme_minimal()
 
 # linear model
-lm <- lm(Bill_Size ~ Tip)
+lm <- lm(tip ~ bill_size)
 print(lm)
