@@ -6,7 +6,7 @@ bill_size <- c(22, 15, 10, 35, 40, 55, 30, 60, 45, 33, 25, 48, 37, 43, 55, 60)
 
 # Define Tip based on a beta (slope) of 0.2 and add random noise
 set.seed(123)  # For reproducibility
-tip <- 0.2 * bill_Size + rnorm(length(bill_Size), mean = 0, sd = 1.5)  # Adding noise to simulate real data
+tip <- 0.2 * bill_size + rnorm(length(bill_Size), mean = 0, sd = 1.5)  # Adding noise to simulate real data
 
 # Combine into a data frame
 data <- data.frame(bill_size = bill_size, tip = Tip)
