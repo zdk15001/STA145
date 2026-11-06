@@ -26,4 +26,4 @@ ggplot(data, aes(x = bill_size, y = tip)) +
 
 # linear model
 lm <- lm(tip ~ bill_size)
-print(lm)
+summary(lm)
