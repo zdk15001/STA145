@@ -26,3 +26,4 @@ ggplot(data, aes(x = Bill_Size, y = Tip)) +
 
 # linear model
 lm <- lm(Bill_Size ~ Tip)
+print(lm)
