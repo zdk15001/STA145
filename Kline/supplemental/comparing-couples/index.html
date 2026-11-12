@@ -1333,6 +1333,19 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     });
     tbl.appendChild(el("thead", null, [tr])); tbl.appendChild(tbody);
   }
+  /* The “most” rule (workbook): most answers fall between 1 SD below and 1 SD above the mean.
+     If that range runs past the answers anyone can give (the 1-to-5 scale, or below 0 for years),
+     the answers are skewed and the range is only a rough sketch. For skewed answers we fall back
+     on the IQR: where the middle 50 percent sit (Q1 to Q3). */
+  function mostRule(s, o) {
+    var lim = o.domain || [0, Infinity], lo = r2(s.mean - s.sd), hi = r2(s.mean + s.sd);
+    var under = +lo < lim[0], over = +hi > lim[1], past = "";
+    if (under && over) past = "No one can be below " + lim[0] + " or above " + lim[1] + " " + o.unit + ", so both ends of that range are empty.";
+    else if (under) past = "No one can be below " + lim[0] + " " + o.unit + ", so the bottom part of that range is empty.";
+    else if (over) past = "No one can be above " + lim[1] + " " + o.unit + ", so the top part of that range is empty.";
+    return { range: "between " + lo + " and " + hi + " " + o.unit, past: past,
+      iqr: (s.q1 === s.q3 ? "all exactly " + r2(s.q1) : "between " + r2(s.q1) + " and " + r2(s.q3)) + " " + o.unit };
+  }
   function cellExplain(col, row) {
     var c = ex.c, g = c.grp, o = OUT[c.y], u = o.unit;
     if (row < 0) {
@@ -1340,7 +1353,7 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
         group: "The two groups being compared, labeled the way R labels them. R puts them in alphabetical order.",
         n: "n is the number of people in each group.",
         mean: "The mean is the average: add up everyone's answers and divide by n. It's the number the t-test compares, and the diamond in the box plot.",
-        sd: "The standard deviation (SD) measures spread: roughly, how far a typical answer sits from its group's mean. A bigger SD means answers are more spread out.",
+        sd: "The standard deviation (SD) measures spread. Read it with the “most” rule: most answers in a group fall between 1 SD below and 1 SD above the group's mean (about 68% of them when the answers are roughly normal). A bigger SD means a wider range, so answers are more spread out.",
         q1: "Q1, the lower quartile, is the 25th percentile: a quarter of answers are at or below it. It's the left edge of the box.",
         med: "The median is the middle answer, the 50th percentile: half the answers are at or below it. It's the dark line inside the box.",
         q3: "Q3, the upper quartile, is the 75th percentile: three quarters of answers are at or below it. It's the right edge of the box. The middle half of the answers falls between Q1 and Q3 (the interquartile range, or IQR)."
@@ -1355,11 +1368,13 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
       case "mean": return { title: "Mean for " + G.lab + " = " + r2(s.mean), paras: [
         cap(G.who) + " " + o.verb(r2(s.mean)) + ". Compare that with " + r2(so.mean) + " for " + O2.short + ", a gap of " + r2(Math.abs(s.mean - so.mean)) + " " + u + ". That gap is what the t-test asks about."] };
       case "sd": {
-        var ratio = Math.max(s.sd, so.sd) / Math.min(s.sd, so.sd);
+        var ratio = Math.max(s.sd, so.sd) / Math.min(s.sd, so.sd), most = mostRule(s, o);
         return { title: "SD for " + G.lab + " = " + r2(s.sd), paras: [
-          "Answers for " + G.short + " typically sit about " + r2(s.sd) + " " + u + " away from their mean of " + r2(s.mean) + ".",
-          ratio < 1.5 ? "That's similar to the spread for " + O2.short + " (" + r2(so.sd) + "), so the two groups are about equally spread out."
-            : "That's " + (s.sd > so.sd ? "more" : "less") + " spread out than " + O2.short + " (" + r2(so.sd) + "). Unequal spreads are why R's Welch test, which allows them, is a good choice."] };
+          "By the “most” rule, most " + G.short + " are " + most.range + " on this measure. That range is 1 SD (" + r2(s.sd) + ") below and above their mean of " + r2(s.mean) + "."]
+          .concat(most.past ? [most.past + " That happens when answers are skewed. The “most” rule works best when answers are roughly normal, so treat this range as a rough sketch.",
+            "When the variable is skewed, we can use the IQR. In this case, the middle 50 percent are " + most.iqr + " (Q1 and Q3)."] : [])
+          .concat([ratio < 1.5 ? "This SD is similar to the one for " + O2.short + " (" + r2(so.sd) + "), so the two groups are about equally spread out."
+            : "This group is " + (s.sd > so.sd ? "more" : "less") + " spread out than " + O2.short + " (SD " + r2(so.sd) + "). Unequal spreads are why R's Welch test, which allows them, is a good choice."]) };
       }
       case "q1": return { title: "Q1 for " + G.lab + " = " + r2(s.q1), paras: [
         "A quarter of " + G.short + " are at or below " + r2(s.q1) + " " + u + " on this measure, and three quarters are above it."] };
@@ -1460,8 +1475,12 @@ footer { margin-top: 2rem; color: var(--muted); font-size: var(--step--1); }
     tip.appendChild(el("p", { text: "Practical significance considers whether a difference is large or meaningful enough to have real-world implications, regardless of the p-value. It addresses the question: “Is this result important in a real-world context?”" }));
     tip.appendChild(el("p", { text: "Here, ask: is a difference of " + r2(Math.abs(res.diff)) + " " + o.unit + " in the average " + o.noun + (o.scale || "") +
       ", between " + g.A.short + " and " + g.B.short + ", important in a real-world context?" }));
-    tip.appendChild(el("p", { text: "To help you decide, compare it with the spread inside each group: individual people typically sit about " + r2(sa.sd) + " " + o.unit + " (" + g.A.lab.replace(/_/g, " ") +
-      ") and " + r2(sb.sd) + " " + o.unit + " (" + g.B.lab.replace(/_/g, " ") + ") from their group's average. Those are the standard deviations." }));
+    var mostA = mostRule(sa, o), mostB = mostRule(sb, o);
+    tip.appendChild(el("p", { text: "To help you decide, compare it with the spread inside each group. By the “most” rule, most " + g.A.short + " are " + mostA.range + ", and most " + g.B.short + " are " + mostB.range +
+      ". Each range is 1 standard deviation (" + r2(sa.sd) + " and " + r2(sb.sd) + " " + o.unit + ") below and above the group's average." +
+      (mostA.past || mostB.past ? " Any part of a range that runs past the possible answers is empty. That happens when answers are skewed, so treat these ranges as rough sketches." : "") }));
+    if (mostA.past || mostB.past) tip.appendChild(el("p", { text: "When the variable is skewed, we can use the IQR. In this case, the middle 50 percent are " +
+      (mostA.iqr === mostB.iqr ? mostA.iqr + " in both groups." : mostA.iqr + " (" + g.A.lab.replace(/_/g, " ") + ") and " + mostB.iqr + " (" + g.B.lab.replace(/_/g, " ") + ").") }));
     tip.appendChild(el("p", { class: "term-tip-note", text: "Statistical significance is a separate question: whether the difference is unlikely to be due to random chance alone. A result can be one without the other." }));
     return tip;
   }

@@ -57,6 +57,7 @@ Where to find things in `src/app.js` (search for these names):
 | The "What questions can't these data answer?" list | `var LIMITS` |
 | What each part of the R printout means when clicked | `function partExplain` |
 | What each summary-table cell means when clicked | `function cellExplain` |
+| The “most” rule ranges, and the IQR line for skewed answers, used to explain each SD | `function mostRule` |
 | The assumptions checks | `function assumptions` |
 | The significance wording ("fairly confident that the average … is different", "do not have enough evidence to say …") | `function differentClause` |
 | The "You tell me!" practical significance hover | `function practicalTip` |
