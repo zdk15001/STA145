@@ -17,6 +17,7 @@
  *   to log in, until you tick its box in column C. Changing a username un-ticks the box.
  */
 
+const BUILD = 3; /* goes up with each change to this file, so it is easy to tell which version is deployed */
 const SHEET_NAME = 'players';
 const HEAD = ['id', 'name', 'approved', 'level', 'perfect', 'best', 'stars', 'fails', 'decor', 'reachedAt', 'updatedAt', 'createdAt', 'codeVersion', 'wrongCodes'];
 const COL = {}; HEAD.forEach(function (h, i) { COL[h] = i; });
@@ -96,7 +97,7 @@ function resetReturnCode() {
 
 /* ---------------- web app ---------------- */
 
-function doGet() { return out({ ok: true, service: 'room-for-error', version: 1 }); }
+function doGet() { return out({ ok: true, service: 'room-for-error', version: 1, build: BUILD }); }
 
 function doPost(e) {
   let req = null;
@@ -117,7 +118,7 @@ function handle(req) {
   if (!secret || !classCode) return { ok: false, error: 'not_set_up' };
   if (normClass(req.classCode) !== classCode) return { ok: false, error: 'class_code' };
   switch (req.action) {
-    case 'ping': return { ok: true };
+    case 'ping': return { ok: true, build: BUILD };
     case 'board': return board();
     case 'join': return locked(function () { return join(req); });
     case 'signin': return locked(function () { return signin(req); });
