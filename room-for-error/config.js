@@ -4,7 +4,7 @@ window.RFE_CONFIG = {
      Empty (the default): the game runs entirely in each student's own browser and sends nothing anywhere.
      To turn the leaderboard on, follow leaderboard/SETUP.md and paste your web app address between the
      quotes. It looks like https://script.google.com/macros/s/.../exec */
-  leaderboardUrl: '',
+  leaderboardUrl: 'https://script.google.com/macros/s/AKfycbzFpFBeCsfeUpDA7rrZ9MY40y_r5J-1Ax-ZuKkkjFqQNAx6FP5pWzUORzgM8uMCn_i7/exec',
 
   /* Shown to students in the "About, privacy and accessibility" box. Keep these true for your class. */
   course: 'STA 145: Applied Statistics for Social Scientists',

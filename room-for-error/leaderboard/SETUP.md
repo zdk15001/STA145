@@ -36,7 +36,7 @@ It never holds real names, email addresses, student IDs, internet addresses, pas
 3. Delete whatever is in the editor, paste in all of `Code.gs`, and save.
 4. Go back to the Sheet and reload the page. A **Room for Error** menu appears next to Help.
 5. Choose **Room for Error → 1. Set up this sheet**. Google asks you to authorize the script the first time. It asks to see and edit this one spreadsheet and to show menus and message boxes in it, and nothing else.
-6. A box shows your **class code**. Note it. Column C of the sheet now holds the approval checkboxes.
+6. A box shows your **class code**. Note it. Each new username will arrive in the `players` tab with its own checkbox in column C.
 7. Back in the Apps Script editor, choose **Deploy → New deployment**. Click the gear and pick **Web app**. Set **Execute as** to *Me* and **Who has access** to *Anyone*. Click **Deploy**.
 8. Copy the **Web app URL**. It ends in `/exec`.
 9. In `config.js`, paste that address between the quotes after `leaderboardUrl:` and commit the change.

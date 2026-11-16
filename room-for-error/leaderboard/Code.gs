@@ -46,7 +46,6 @@ function setup() {
   if (!sh) sh = ss.insertSheet(SHEET_NAME);
   if (sh.getLastRow() === 0) { sh.appendRow(HEAD); sh.setFrozenRows(1); }
   sh.getRange('B:B').setNumberFormat('@'); /* usernames stay plain text, so "007" or "3-4" is never turned into a number or a date */
-  sh.getRange('C2:C').insertCheckboxes(); /* column C: tick a box to approve that username */
   const props = PropertiesService.getScriptProperties();
   if (!props.getProperty('SECRET')) props.setProperty('SECRET', Utilities.getUuid() + Utilities.getUuid());
   if (!props.getProperty('CLASS_CODE')) props.setProperty('CLASS_CODE', randomClassCode());
@@ -70,10 +69,10 @@ function newClassCode() {
 
 function deleteAllPlayers() {
   const ui = SpreadsheetApp.getUi(), sh = sheet();
-  if (!sh || sh.getLastRow() < 2) { ui.alert('There are no players to delete.'); return; }
-  const n = sh.getLastRow() - 1;
+  if (!sh || lastRow(sh) < 2) { ui.alert('There are no players to delete.'); return; }
+  const n = lastRow(sh) - 1;
   if (ui.alert('Delete all ' + n + ' players?', 'This permanently removes every username and all progress from this sheet. Students keep the progress saved in their own browsers.', ui.ButtonSet.OK_CANCEL) !== ui.Button.OK) return;
-  sh.deleteRows(2, n);
+  sh.getRange(2, 1, n, HEAD.length).clearContent().clearDataValidations(); /* emptied, not deleted: Sheets refuses to delete every row below the header */
   ui.alert('All players were deleted. Make a new class code before you reuse this sheet with another class.');
 }
 
@@ -154,8 +153,11 @@ function join(req) {
   if (rows.length >= MAX_PLAYERS) return { ok: false, error: 'full' };
   if (findByName(rows, name) >= 0) return { ok: false, error: 'name_taken' };
   const id = Utilities.getUuid(), now = Date.now(), p = cleanProgress(req.progress);
-  sh.appendRow([id, '', false, p.level, p.perfect, JSON.stringify(p.best), JSON.stringify(p.stars), JSON.stringify(p.fails), JSON.stringify(p.decor), p.reachedAt, now, now, 1, 0]);
-  setName(sh, sh.getLastRow(), name);
+  const r = lastRow(sh) + 1; /* the first empty row, found from column A (see lastRow) */
+  if (r > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 50);
+  sh.getRange(r, 1, 1, HEAD.length).setValues([[id, '', false, p.level, p.perfect, JSON.stringify(p.best), JSON.stringify(p.stars), JSON.stringify(p.fails), JSON.stringify(p.decor), p.reachedAt, now, now, 1, 0]]);
+  setName(sh, r, name);
+  sh.getRange(r, COL.approved + 1).insertCheckboxes(); /* the approval box for this username, unticked */
   return { ok: true, id: id, name: name, code: codeFor(id, 1), approved: false, progress: p, updatedAt: now };
 }
 
@@ -214,7 +216,7 @@ function rename(req) {
 function remove(req) {
   const sh = sheet(), rows = readRows(sh), i = findAuthed(rows, req);
   if (i < 0) return { ok: false, error: 'bad_login' };
-  sh.deleteRow(i + 2);
+  if (sh.getMaxRows() - sh.getFrozenRows() <= 1) sh.getRange(i + 2, 1, 1, HEAD.length).clearContent().clearDataValidations(); else sh.deleteRow(i + 2);
   return { ok: true };
 }
 
@@ -223,7 +225,15 @@ function remove(req) {
 function setName(sh, row, name) { sh.getRange(row, COL.name + 1).setNumberFormat('@').setValue(name); }
 function isTrue(v) { return v === true || String(v).toUpperCase() === 'TRUE'; }
 function sheet() { return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME); }
-function readRows(sh) { const n = sh.getLastRow(); return n < 2 ? [] : sh.getRange(2, 1, n - 1, HEAD.length).getValues(); }
+/* The last row that holds a player, judged by column A. Sheets counts an unticked checkbox as content, so getLastRow() alone
+   can point far below the real data when a column is full of checkboxes. */
+function lastRow(sh) {
+  const n = sh.getLastRow(); if (n < 2) return n;
+  const ids = sh.getRange(1, 1, n, 1).getValues();
+  let r = n; while (r > 1 && String(ids[r - 1][0]) === '') r--;
+  return r;
+}
+function readRows(sh) { const n = lastRow(sh); return n < 2 ? [] : sh.getRange(2, 1, n - 1, HEAD.length).getValues(); }
 function findByName(rows, name) { const want = String(name).toLowerCase(); for (let i = 0; i < rows.length; i++) if (String(rows[i][COL.name]).toLowerCase() === want) return i; return -1; }
 function findAuthed(rows, req) {
   const id = String(req.id || '');
