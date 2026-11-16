@@ -20,6 +20,13 @@ Once your username is approved, anyone with the class code can see your username
 
 When you create a username you are given a short login code. Write it down. You need it, with your username, to log in again, and you cannot log in again until your username is approved. The code is short and easy to guess. It keeps mix-ups out; it is not strong security, so treat this as a game account. If you lose your code, ask Professor Kline for a new one.
 
+## What is recorded besides your scores
+
+- If you create a username, the Google Sheet also records three times: when you created it, when you reached your current level, and when your progress was last saved. Together they show when you played and how quickly you moved through the levels.
+- It also counts how many wrong login codes have been tried against your username.
+- The game does not record which questions you saw, which answers you chose, or how long each one took. It keeps only your best score and number of failed tries on each level.
+- If you play anonymously, none of this is recorded anywhere but your own browser.
+
 ## What is never collected
 
 The game never asks for your real name, email address, student ID or a password of your own. It has no ads, no analytics and no tracking cookies. Like any website, the service that delivers the page (GitHub Pages) receives your device's internet address when the page loads, and Google does when the leaderboard is used. The game never sees or stores it.
