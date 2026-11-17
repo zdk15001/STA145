@@ -1,0 +1,25 @@
+# R and RStudio session files
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+.Renviron
+
+# Secrets and local settings
+.env
+.env.*
+
+# Python and Node leftovers (comparing-couples build and tests)
+__pycache__/
+*.pyc
+node_modules/
+
+# Windows and Mac clutter
+Thumbs.db
+desktop.ini
+*.lnk
+.DS_Store
+
+# Office lock files and temp files
+~$*
+*.tmp
