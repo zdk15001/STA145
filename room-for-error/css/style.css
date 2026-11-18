@@ -192,3 +192,10 @@ select{font:inherit;color:inherit}
 dialog select{min-height:48px;border:2px solid var(--ink);border-radius:12px;padding:8px 12px;background:var(--paper);width:100%;font-size:1.05rem}
 .codebox.big{font-size:2.4rem;text-align:center;letter-spacing:.25em;padding:14px 12px}
 ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+
+/* x-bar, y-bar, p-hat, y-hat: the bar or hat is drawn over the letter here, so it sits in the same place on every device */
+.sym{position:relative;display:inline-block}
+.sym::after{position:absolute;left:50%;top:0;transform:translateX(-50%);pointer-events:none}
+.sym.bar::after{content:'\00af'}
+.sym.hat::after{content:'\02c6'}
+.sym.uc::after{top:-.2em}

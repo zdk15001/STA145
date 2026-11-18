@@ -238,7 +238,7 @@
   const syntax = [
     ['x <- c(2, 1, 5)', ['x <- c(2 1 5)', 'x <- (2, 1, 5)', 'x <- C(2, 1, 5)'], 'Vectors need commas between values and must be wrapped in c( ). Function names are case-sensitive, so C( ) is not the same as c( ).'],
     ['install.packages("readr")', ['install.packages(readr)', 'Install.Packages("readr")', 'install packages("readr")'], 'The package name goes in quotation marks inside install.packages(). R is case-sensitive, and function names cannot contain spaces.'],
-    ['mean(scores)', ['Mean(scores)', 'mean(scores', 'mean scores'], 'Function names are lowercase and case-sensitive, and parentheses must come in pairs.'],
+    ['mean(c(88, 92, 79))', ['Mean(c(88, 92, 79))', 'mean(c(88, 92, 79)', 'mean c(88, 92, 79)'], 'Function names are lowercase and case-sensitive, and every opening parenthesis needs a closing one. This line builds its own vector, so it does not depend on an object created earlier.'],
     ['my_variable <- 10', ['my variable <- 10', 'my-variable <- 10', '10 my_variable <-'], 'Object names cannot contain spaces, and R reads a hyphen as subtraction. Use underscores to separate words.'],
     ['library(readr)', ['library readr', 'Library(readr)', 'library(readr'], 'library() is lowercase, needs its parentheses, and both parentheses must be present.']
   ];

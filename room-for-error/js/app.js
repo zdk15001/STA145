@@ -5,6 +5,11 @@
   const PASS = 4, PER = 5, MAX = 20, LS = 'room-for-error-gh-v2';
   const $ = (s, r = document) => r.querySelector(s);
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  /* x̄, ȳ, p̂, ŷ are a letter followed by a combining bar or hat. The reading font has no attachment point for the bar on x
+     and no hat at all, so each phone used to place them differently. They are drawn here instead (see .sym in style.css),
+     and a screen reader hears "x bar" or "p hat". */
+  const sym = (html) => html.replace(/([A-Za-z])([\u0304\u0302])/g, (m, ch, mk) => { const w = mk === '\u0304' ? 'bar' : 'hat'; return `<span class="sym ${w}${ch !== ch.toLowerCase() ? ' uc' : ''}" role="img" aria-label="${ch} ${w}">${ch}</span>`; });
+  const escq = (s) => sym(esc(s));
   const app = $('#app'), dlg = $('#dlg');
   const MODS = [[1, 'Module 1: Describing Data'], [11, 'Module 2: Inference'], [15, 'Module 3: Relationships Between Two Variables']];
   const CFG = window.RFE_CONFIG || {}, NET = RFE.enabled;
@@ -214,22 +219,22 @@
     const q = z.qs[z.i], r = z.res[z.i];
     let h = `<section class="card" aria-labelledby="qh"><div class="qhead"><h2 id="qh" tabindex="-1">Level ${L.n}: ${esc(L.title)}</h2><button type="button" class="btn quiet" data-act="quit">Quit</button></div>`;
     h += `<div class="row-between"><span><span class="tag">Question ${z.i + 1} of ${PER}</span>${z.ease ? ` <span class="tag easy">Attempt ${z.attempt}: easier set</span>` : ''}</span><span class="dots" aria-hidden="true">${z.qs.map((_, k) => `<i class="${z.res[k] ? (z.res[k].ok ? 'ok' : 'no') : k === z.i ? 'cur' : ''}"></i>`).join('')}</span></div>`;
-    h += `<p class="stem" id="stem">${esc(q.q)}</p>`;
-    if (q.table) h += `<div class="scroll" tabindex="0" role="group" aria-label="Table"><table class="data">${q.table.cap ? `<caption>${esc(q.table.cap)}</caption>` : ''}<thead><tr>${q.table.head.map((c) => `<th scope="col">${esc(c)}</th>`).join('')}</tr></thead><tbody>${q.table.rows.map((row) => '<tr>' + row.map((c, ci) => { const ind = typeof c === 'string' && c.startsWith('   '); return ci === 0 ? `<th scope="row" class="${ind ? 'ind' : ''}" style="background:none;font-family:inherit;font-weight:${ind ? 400 : 700}">${esc(String(c).trim())}</th>` : `<td>${esc(c)}</td>`; }).join('') + '</tr>').join('')}</tbody></table></div>`;
+    h += `<p class="stem" id="stem">${escq(q.q)}</p>`;
+    if (q.table) h += `<div class="scroll" tabindex="0" role="group" aria-label="Table"><table class="data">${q.table.cap ? `<caption>${escq(q.table.cap)}</caption>` : ''}<thead><tr>${q.table.head.map((c) => `<th scope="col">${escq(c)}</th>`).join('')}</tr></thead><tbody>${q.table.rows.map((row) => '<tr>' + row.map((c, ci) => { const ind = typeof c === 'string' && c.startsWith('   '); return ci === 0 ? `<th scope="row" class="${ind ? 'ind' : ''}" style="background:none;font-family:inherit;font-weight:${ind ? 400 : 700}">${escq(String(c).trim())}</th>` : `<td>${escq(c)}</td>`; }).join('') + '</tr>').join('')}</tbody></table></div>`;
     if (q.code) h += `<div class="scroll" tabindex="0" role="group" aria-label="R code or output"><pre class="code">${esc(q.code)}</pre></div><p class="swipe">Swipe sideways to see the whole output.</p>`;
     if (q.svg) h += q.svg;
     if (q.type === 'mc') {
       h += `<fieldset class="opts" ${r ? 'disabled' : ''}><legend class="sr">Answer choices</legend>` + q.opts.map((o, k) => {
         const cls = r ? (k === q.ans ? ' right' : k === r.given ? ' wrong' : '') : '';
         const mark = r ? (k === q.ans ? '<span class="mark">✓ Correct answer</span>' : k === r.given ? '<span class="mark">✗ Your answer</span>' : '') : '';
-        return `<button type="button" class="opt${q.mono ? ' mono' : ''}${cls}" data-act="pick" data-k="${k}" aria-pressed="${(r ? r.given : z.sel) === k}"><span class="k" aria-hidden="true">${'ABCDE'[k]}</span><span><span class="t">${esc(o)}</span>${mark}</span></button>`;
+        return `<button type="button" class="opt${q.mono ? ' mono' : ''}${cls}" data-act="pick" data-k="${k}" aria-pressed="${(r ? r.given : z.sel) === k}"><span class="k" aria-hidden="true">${'ABCDE'[k]}</span><span><span class="t">${q.mono ? esc(o) : escq(o)}</span>${mark}</span></button>`;
       }).join('') + '</fieldset>';
     } else {
       h += `<div class="numrow"><label for="numIn" class="sr">Your answer</label><input id="numIn" type="text" inputmode="${/negative/i.test(q.hint || '') ? 'text' : 'decimal'}" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Your answer" value="${r ? esc(r.given) : ''}" ${r ? 'disabled' : ''} aria-describedby="stem numHint"><span class="small muted" id="numHint">${esc(q.hint || 'Type a number')}</span></div>`;
     }
     if (!r) h += `<p class="err" id="qerr" role="alert"></p><div class="actions"><button type="button" class="btn primary" data-act="check">Check answer</button></div>`;
     else {
-      h += `<div class="fb ${r.ok ? 'ok' : 'no'}" id="fb" tabindex="-1" role="status"><h3>${r.ok ? 'Correct' : 'Not quite'}</h3>${q.type === 'num' && !r.ok ? `<p><strong>Answer: ${esc(fmtAns(q))}</strong></p>` : ''}<p>${esc(q.why)}</p></div>`;
+      h += `<div class="fb ${r.ok ? 'ok' : 'no'}" id="fb" tabindex="-1" role="status"><h3>${r.ok ? 'Correct' : 'Not quite'}</h3>${q.type === 'num' && !r.ok ? `<p><strong>Answer: ${esc(fmtAns(q))}</strong></p>` : ''}<p>${escq(q.why)}</p></div>`;
       h += `<div class="actions"><button type="button" class="btn primary" data-act="next">${z.i + 1 < PER ? 'Next question' : 'See results'}</button></div>`;
     }
     return h + '</section>';
